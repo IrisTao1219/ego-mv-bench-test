@@ -1,0 +1,15 @@
+{
+  "data_root": "../datasets/ego-mc-bench",
+  "model_path": "../datasets/Hf_model/Qwen3-VL-2B-Instruct",
+  "output_dir": "outputs/qwen3vl-smoke",
+  "video_ids": null,
+  "limit": 1,
+  "interval": 5,
+  "window": 10,
+  "frames": 4,
+  "max_side": 448,
+  "max_seconds": 60.0,
+  "max_new_tokens": 160,
+  "device_map": "auto",
+  "dry_run": false
+}
