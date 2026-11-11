@@ -160,6 +160,7 @@ def main():
                                     return_tensors='pt').to(model.device)
                                 with torch.inference_mode():
                                     ids = model.generate(**inputs, generation_config=generation,
+                                                         do_sample=False, num_beams=1,
                                                          max_new_tokens=a.max_new_tokens)
                                 raw = processor.batch_decode(ids[:, inputs.input_ids.shape[1]:],
                                                              skip_special_tokens=True)[0]
