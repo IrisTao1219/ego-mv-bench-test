@@ -7,6 +7,36 @@ from pathlib import Path
 import time
 
 
+def build_prompt(now, history):
+    return (
+        f'You are a cautious live cooking assistant at video time {now:.3f}s. '
+        'Images are ordered past-to-present. Report at most one NEW event. '
+        'Choose exactly one type: Instruction, Feedback, Success, or None. '
+        'Instruction: a clearly supported next action; do not invent a recipe. '
+        'Feedback: a specific visible mistake and a concise correction. '
+        'Success: visible completion of a specific previously instructed action. '
+        'A tidy kitchen or objects being present is not success. Touching oven '
+        'controls does not prove it reached its target temperature. '
+        'Previous assistant messages may be wrong; they are not evidence. '
+        'Do not repeat an event already reported. If uncertain or nothing new '
+        'needs saying, output exactly {"type":"None","text":""}. '
+        'Return only one JSON object with a single type string and brief English text. '
+        'Valid format examples (illustrations only, not observations): '
+        '{"type":"Instruction","text":"Place the bowl on a stable surface."} '
+        '{"type":"Feedback","text":"The bowl is overflowing; stop pouring."} '
+        '{"type":"Success","text":"The instructed lid is now closed."} '
+        'Never join type names with a pipe character. '
+        'Previous assistant events: ' + json.dumps(history[-12:])
+    )
+
+
+def is_recent_duplicate(message, now, history):
+    normalized = ' '.join(message.casefold().split())
+    return any(now - event['time'] <= 30 and
+               ' '.join(event['message'].casefold().split()) == normalized
+               for event in history)
+
+
 def parse_answer(raw):
     text = raw.strip()
     if text.startswith('```'):
@@ -123,18 +153,10 @@ def main():
                         times.append(index / fps)
                         content.extend([{'type': 'text', 'text': f'Frame at {index / fps:.3f}s:'},
                                         {'type': 'image', 'image': image}])
-                    prompt = (
-                        f'You are a live cooking assistant at video time {now:.3f}s. '
-                        'Images are ordered past-to-present. Use only visible evidence. '
-                        'Give one brief English instruction, a correction for an observed mistake, '
-                        'or success confirmation for a completed step. Do not invent a recipe or '
-                        'repeat a prior message. If uncertain or no intervention is needed, choose None. '
-                        'Return ONLY JSON: {"type":"Instruction|Feedback|Success|None","text":"..."}. '
-                        'Previous assistant events: ' + json.dumps(history[-12:])
-                    )
+                    prompt = build_prompt(now, history)
                     content.append({'type': 'text', 'text': prompt})
                     started = time.monotonic()
-                    raw, error, accepted = '', None, None
+                    raw, error, accepted, suppressed = '', None, None, None
                     if not a.dry_run:
                         inputs = processor.apply_chat_template(
                             [{'role': 'user', 'content': content}], tokenize=True,
@@ -147,14 +169,19 @@ def main():
                         try:
                             kind, text = parse_answer(raw)
                             if kind != 'None':
-                                accepted = f'{kind}: {text}'
-                                result['pred_texts'].append(accepted)
-                                result['pred_timestamps'].append(now)
-                                history.append({'time': now, 'message': accepted})
+                                candidate = f'{kind}: {text}'
+                                if is_recent_duplicate(candidate, now, history):
+                                    suppressed = 'duplicate_within_30_seconds'
+                                else:
+                                    accepted = candidate
+                                    result['pred_texts'].append(accepted)
+                                    result['pred_timestamps'].append(now)
+                                    history.append({'time': now, 'message': accepted})
                         except (ValueError, TypeError) as exc:
                             error = str(exc)
                     entry = {'video_id': video_id, 'timestamp': now, 'frame_timestamps': times,
                              'raw_response': raw, 'accepted': accepted, 'parse_error': error,
+                             'suppressed_reason': suppressed,
                              'latency_seconds': time.monotonic() - started, 'dry_run': a.dry_run}
                     log.write(json.dumps(entry, ensure_ascii=False) + '\n')
                     log.flush()
