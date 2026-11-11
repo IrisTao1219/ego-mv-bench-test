@@ -1,0 +1,15 @@
+{
+  "video_id": "GX010021",
+  "pred_texts": [
+    "Success: The kitchen is ready for cooking. All necessary items are present and organized.",
+    "Success: The kitchen is ready for cooking. All necessary items are present and organized.",
+    "Success: The oven has been preheated. The cooking process is ready to begin.",
+    "Success: The plastic container has been successfully placed on the counter."
+  ],
+  "pred_timestamps": [
+    0.0,
+    4.971633333333333,
+    19.986633333333334,
+    34.968266666666665
+  ]
+}

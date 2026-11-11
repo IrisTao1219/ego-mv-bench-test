@@ -27,7 +27,7 @@ https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct
 ## 先验证视频读取（不加载模型）
 
 ```bash
-python run_inference.py --data-root /datasets/ego-mc-bench \
+python run_inference.py --data-root ../datasets/ego-mc-bench \
   --output-dir outputs/decode-test --max-seconds 20 --dry-run
 ```
 
@@ -35,8 +35,8 @@ python run_inference.py --data-root /datasets/ego-mc-bench \
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python run_inference.py \
-  --data-root /datasets/ego-mc-bench \
-  --model-path /datasets/Hf_model/Qwen3-VL-2B-Instruct \
+  --data-root ../datasets/ego-mc-bench \
+  --model-path ../datasets/Hf_model/Qwen3-VL-2B-Instruct \
   --output-dir outputs/qwen3vl-smoke --limit 1 --max-seconds 60
 ```
 
@@ -44,7 +44,7 @@ CUDA_VISIBLE_DEVICES=0 python run_inference.py \
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python run_inference.py \
-  --data-root /datasets/ego-mc-bench \
+  --data-root ../datasets/ego-mc-bench \
   --output-dir outputs/qwen3vl-full --limit 0
 ```
 
