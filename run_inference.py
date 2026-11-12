@@ -88,6 +88,8 @@ def main():
     p.add_argument('--data-root', type=Path, required=True)
     p.add_argument('--model-path', default='/datasets/Hf_model/Qwen3-VL-2B-Instruct')
     p.add_argument('--output-dir', type=Path, required=True)
+    p.add_argument('--overwrite', action='store_true',
+                   help='Allow an existing output directory; replace files produced by this run')
     p.add_argument('--video-ids', nargs='+')
     p.add_argument('--limit', type=int, default=1)
     p.add_argument('--max-seconds', type=float, default=0, help='Absolute video cutoff, 0 = all')
@@ -109,7 +111,7 @@ def main():
             raise ValueError(f"No instructions: {s['video_id']}")
     import cv2
     from PIL import Image
-    a.output_dir.mkdir(parents=True, exist_ok=False)
+    a.output_dir.mkdir(parents=True, exist_ok=a.overwrite)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(protocol='per_recipe_step', reference='arXiv:2606.09547v2',
                   prompt_version='completion_then_mistake_v1_adapted', trained_on_ego_comist=False)
@@ -173,7 +175,7 @@ def main():
                             image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                             image.thumbnail((a.max_side, a.max_side))
                             frame_path = frame_dir / f'{index:09d}.png'
-                            if not frame_path.exists():
+                            if a.overwrite or not frame_path.exists():
                                 image.save(frame_path)
                             logged_content += [
                                 {'type': 'text', 'text': f'Frame {index/fps:.3f}s'},

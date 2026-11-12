@@ -59,7 +59,7 @@ python run_inference.py --data-root ../datasets/ego-mc-bench \
 CUDA_VISIBLE_DEVICES=0 python run_inference.py \
   --data-root ../datasets/ego-mc-bench \
   --model-path ../datasets/Hf_model/Qwen3-VL-2B-Instruct \
-  --device-map cuda:0 --output-dir outputs/qwen3vl-one --limit 1
+  --device-map cuda:0 --output-dir outputs/qwen3vl-one --limit 1 --overwrite
 ```
 
 全量将 --limit 设为 0，并使用新的输出目录。显存不足可降低 --max-frames，但这改变实验配置，需重新记录。max-seconds 截断运行只做排错，不用于正式计分。
@@ -88,7 +88,7 @@ CUDA_VISIBLE_DEVICES=0 python evaluate_official.py \
 - `model_input_frames/<video_id>/*.png`：实际输入的缩放后帧，采用无损 PNG，同一帧复用。
 - `config.json`：运行参数与实验配置。
 
-每次运行请使用新的 `--output-dir`，避免覆盖已有实验。可用 `--video-ids GX010021 GX010023` 选择视频（数量仍受 `--limit` 控制，选择多个时设 `--limit 0`）。dry-run 仅用于读取验证，不用于正式计分。
+默认要求 `--output-dir` 不存在。添加 `--overwrite` 可复用已有目录并覆盖本次生成的配置、预测、日志和输入帧；不会清空目录，未涉及的视频文件会保留。示例：`python run_inference.py --data-root /path/to/data --output-dir outputs/run1 --overwrite`。可用 `--video-ids GX010021 GX010023` 选择视频（数量仍受 `--limit` 控制，选择多个时设 `--limit 0`）。dry-run 仅用于读取验证，不用于正式计分。
 
 ## 代码逻辑测试
 
