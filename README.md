@@ -6,7 +6,7 @@ Python 3.10+，建议 Linux NVIDIA CUDA 服务器。模型默认路径：`/datas
 
 ## 安装
 
-先按服务器 CUDA 环境安装兼容的 PyTorch，再执行：
+依赖固定使用 CUDA 12.8 版 PyTorch 2.11.0 和 torchvision 0.26.0，适用于本项目的 Linux NVIDIA 服务器环境。执行：
 
 ```bash
 python -m pip install -r requirements.txt
@@ -14,7 +14,9 @@ python -m pip install -r requirements.txt
 
 依赖参考[模型官方 Transformers 示例](https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct)。官方评测所需依赖见下方“官方指标”。
 
-模型通过 `AutoModelForImageTextToText` 根据本地 `config.json` 自动选择架构，支持 Qwen3-VL 和 Qwen3.5 多模态模型；目录名称不决定模型类型。Qwen3.5 需要支持该架构的 Transformers，本项目依赖已更新为 `transformers>=5.5.0,<6`，已有环境请运行 `python -m pip install -U -r requirements.txt`。
+模型通过 `AutoModelForImageTextToText` 根据本地 `config.json` 自动选择架构，支持 Qwen3-VL 和 Qwen3.5 多模态模型；目录名称不决定模型类型。Qwen3.5 需要支持该架构的 Transformers，本项目依赖为 `transformers>=5.5.0,<6`。PyTorch 包通过官方 CUDA 12.8 索引安装，并使用 `+cu128` 版本后缀锁定 CUDA 构建。
+
+如果旧环境装过 CUDA 13 版 PyTorch，请先卸载旧的 torch、torchvision、torchaudio 和 CUDA 13 运行时包，再安装本文件，避免残留库冲突。本项目不需要 torchaudio；如其他任务需要，请安装匹配的 `torchaudio==2.11.0+cu128`。
 
 `--device-map` 使用进程内可见 GPU 的编号。例如 `CUDA_VISIBLE_DEVICES=1` 只暴露物理 GPU 1，此时应传 `--device-map cuda:0`。多卡自动分配可使用 `--device-map auto`，仍受 `CUDA_VISIBLE_DEVICES` 限制。
 

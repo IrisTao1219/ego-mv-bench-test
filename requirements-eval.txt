@@ -1,4 +1,6 @@
 # Official Qualcomm evaluator dependencies; install inference dependencies separately.
+# Reuse the CUDA 12.8 torch pin and shared dependency bounds even for eval-only installs.
+-c requirements.txt
 torch>=2.6
 bert-score>=0.3.13
 rouge-score>=0.1.2
