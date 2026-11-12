@@ -84,9 +84,26 @@ CUDA_VISIBLE_DEVICES=0 python evaluate_official.py \
 - `predictions.json`：所有已完成视频的预测，字段为 `video_id`、`pred_texts`、`pred_timestamps`。
 - `<video_id>.prediction.json`：推理过程中保存的单视频结果，中断时可检查。
 - `<video_id>.jsonl`：每次调用的实际帧时间、提示词、原始回复、两个判断阶段、解析错误与推理耗时。
+- `<video_id>.model_inputs.jsonl`：逐次记录模型输入消息（保持文本、图片顺序），含视频 ID、步骤、视频时间和判断阶段。图片路径相对于输出目录；空跑时也保存准备好的输入。
+- `model_input_frames/<video_id>/*.png`：实际输入的缩放后帧，采用无损 PNG，同一帧复用。
 - `config.json`：运行参数与实验配置。
 
 每次运行请使用新的 `--output-dir`，避免覆盖已有实验。可用 `--video-ids GX010021 GX010023` 选择视频（数量仍受 `--limit` 控制，选择多个时设 `--limit 0`）。dry-run 仅用于读取验证，不用于正式计分。
+
+## 代码逻辑测试
+
+在项目根目录运行：
+
+```bash
+python -m unittest test_inference
+```
+
+`test_inference.py` 使用构造的数据检查以下逻辑，无需视频、模型权重或 GPU，也无需安装模型推理依赖：
+
+- 从人工标注中只提取 Instruction，并检查生成的提示词不包含测试样例中的人工纠错答案。
+- 严格解析模型回复：判断字段必须为 JSON 布尔值，必须提供非空理由；判断有错误时必须提供纠正建议。格式不合规时应抛出异常。
+
+正常情况下会显示 `Ran 2 tests` 和 `OK`。这些测试不运行真实模型、不计算论文指标；视频读取、实际推理与官方评测仍需按上述流程分别验证。
 
 ## 运行状态与限制
 

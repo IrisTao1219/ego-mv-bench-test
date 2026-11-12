@@ -137,7 +137,10 @@ def main():
             cutoff = min(duration, a.max_seconds) if a.max_seconds else duration
             steps = recipe_steps(sample)
             result = {'video_id': video_id, 'pred_texts': [], 'pred_timestamps': []}
-            with (a.output_dir / f'{video_id}.jsonl').open('w') as log:
+            frame_dir = a.output_dir / 'model_input_frames' / video_id
+            frame_dir.mkdir(parents=True, exist_ok=True)
+            with ((a.output_dir / f'{video_id}.jsonl').open('w') as log,
+                  (a.output_dir / f'{video_id}.model_inputs.jsonl').open('w') as input_log):
                 for step_id, step in enumerate(steps):
                     start = step['start']
                     end = min(steps[step_id + 1]['start'] if step_id + 1 < len(steps) else duration, cutoff)
@@ -161,7 +164,7 @@ def main():
                         if len(indices) > a.max_frames:
                             indices = [indices[round(i * (len(indices)-1) / (a.max_frames-1))]
                                        for i in range(a.max_frames)] if a.max_frames > 1 else [current]
-                        content, timestamps = [], []
+                        content, timestamps, logged_content = [], [], []
                         for index in indices:
                             cap.set(cv2.CAP_PROP_POS_FRAMES, index)
                             ok, frame = cap.read()
@@ -169,6 +172,13 @@ def main():
                                 raise RuntimeError(f'Cannot decode {video_id}, frame {index}')
                             image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                             image.thumbnail((a.max_side, a.max_side))
+                            frame_path = frame_dir / f'{index:09d}.png'
+                            if not frame_path.exists():
+                                image.save(frame_path)
+                            logged_content += [
+                                {'type': 'text', 'text': f'Frame {index/fps:.3f}s'},
+                                {'type': 'image', 'image': str(frame_path.relative_to(a.output_dir)),
+                                 'width': image.width, 'height': image.height}]
                             timestamps.append(index / fps)
                             content += [{'type': 'text', 'text': f'Frame {index/fps:.3f}s'},
                                         {'type': 'image', 'image': image}]
@@ -176,11 +186,19 @@ def main():
                         event = None
                         for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
                             prompt = prompt_for(stage, step['instruction'], requested, recent)
+                            messages = [{'role': 'user', 'content': content + [{'type': 'text', 'text': prompt}]}]
+                            input_log.write(json.dumps({
+                                'video_id': video_id, 'step_id': step_id,
+                                'timestamp': requested, 'stage': stage,
+                                'messages': [{'role': 'user', 'content': logged_content + [
+                                    {'type': 'text', 'text': prompt}]}],
+                            }, ensure_ascii=False) + '\n')
+                            input_log.flush()
                             raw, error, parsed = '', None, None
                             began = time.monotonic()
                             if not a.dry_run:
                                 inputs = processor.apply_chat_template(
-                                    [{'role': 'user', 'content': content + [{'type': 'text', 'text': prompt}]}],
+                                    messages,
                                     tokenize=True, add_generation_prompt=True, return_dict=True,
                                     return_tensors='pt').to(model.device)
                                 with torch.inference_mode():
@@ -199,7 +217,7 @@ def main():
                             log.write(json.dumps({'step_id': step_id, 'instruction': step['instruction'],
                                 'timestamp': requested, 'frame_timestamps': timestamps, 'stage': stage,
                                 'prompt': prompt, 'raw_response': raw, 'parsed': parsed,
-                                'parse_error': error, 'accepted': event, 'dry_run': a.dry_run,
+                                'parse_error': error, 'accepted': event,
                                 'latency_seconds': time.monotonic()-began})+'\n')
                             log.flush()
                             # On malformed completion, do not silently treat it as false.
