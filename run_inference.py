@@ -59,8 +59,9 @@ def check_response(raw, field):
     explanation = match.group(2).strip()
     if positive and not explanation:
         raise ValueError('YES requires a completion explanation or corrective feedback')
-    return {field: positive, 'reason': explanation,
-            **({'feedback': explanation if positive else ''} if field == 'mistake' else {})}
+    if field == 'completed':
+        return {field: positive, 'reason': explanation}
+    return {field: positive, 'feedback': explanation if positive else ''}
 
 
 def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed'):
@@ -78,6 +79,20 @@ def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed'):
     feedbacks = [entry['feedback'] for entry in recent]
     return template.replace('[prev_detected_mistakes]', json.dumps(feedbacks, ensure_ascii=False)).replace(
         '[recipe_step]', instruction)
+
+
+
+def prediction_event(parsed, field):
+    """Serialize decisions without presenting completion evidence as user speech.
+
+    The paper specifies the prompts, but not this success-message mapping.
+    Mistake feedback is preserved verbatim for official text metrics.
+    """
+    if not parsed[field]:
+        return None
+    if field == 'completed':
+        return 'Success: Step complete.'
+    return 'Feedback: ' + parsed['feedback']
 
 
 def main():
@@ -114,6 +129,8 @@ def main():
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(protocol='per_recipe_step', reference='arXiv:2606.09547v2',
                   prompt_version='arxiv_2606.09547v2_appendix_D_verbatim',
+                  paper_prompt_verbatim=True,
+                  success_message_policy='fixed_confirmation_reason_logged_only',
                   response_format='YES_NO', paper_interval_seconds=5,
                   interval_matches_paper=(a.interval == 5), trained_on_ego_comist=False)
     save_json(a.output_dir / 'config.json', config)
@@ -215,8 +232,7 @@ def main():
                                 except (ValueError, TypeError, IndexError) as exc:
                                     error = str(exc)
                                 if parsed and parsed[field]:
-                                    event = ('Success: ' + parsed['reason'] if stage == 'completion'
-                                             else 'Feedback: ' + parsed['feedback'].strip())
+                                    event = prediction_event(parsed, field)
                             log.write(json.dumps({'step_id': step_id, 'instruction': step['instruction'],
                                 'timestamp': requested, 'frame_timestamps': timestamps, 'stage': stage,
                                 'prompt': prompt, 'raw_response': raw, 'parsed': parsed,

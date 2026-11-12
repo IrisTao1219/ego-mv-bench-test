@@ -1,5 +1,5 @@
 import unittest
-from run_inference import recipe_steps, check_response, prompt_for
+from run_inference import recipe_steps, check_response, prompt_for, prediction_event
 from paper_prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
 
 
@@ -42,6 +42,19 @@ class InferenceTests(unittest.TestCase):
         self.assertEqual(prompt_for('mistake', 'Add oil', 42, recent, 'simple'),
                          SIMPLE_MISTAKE_PROMPT.replace('[recipe_step]', 'Add oil'))
         self.assertNotIn('Video observation time', expected)
+
+    def test_completion_reason_is_logged_not_displayed(self):
+        parsed = check_response('YES. The bowl is visible in frame 12.', 'completed')
+        self.assertEqual(parsed['reason'], 'The bowl is visible in frame 12.')
+        self.assertEqual(prediction_event(parsed, 'completed'), 'Success: Step complete.')
+        self.assertNotIn('feedback', parsed)
+        self.assertIsNone(prediction_event(check_response('NO', 'completed'), 'completed'))
+
+    def test_mistake_feedback_is_preserved(self):
+        parsed = check_response('YES. Add one more spoonful.', 'mistake')
+        self.assertNotIn('reason', parsed)
+        self.assertEqual(prediction_event(parsed, 'mistake'), 'Feedback: Add one more spoonful.')
+        self.assertIsNone(prediction_event(check_response('NO', 'mistake'), 'mistake'))
 
     def test_invalid_stage_and_variant(self):
         with self.assertRaises(ValueError):
