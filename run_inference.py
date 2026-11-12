@@ -112,7 +112,8 @@ def main():
     p.add_argument('--max-frames', type=int, default=32, help='Uniformly sample the observed step prefix')
     p.add_argument('--max-side', type=int, default=448)
     p.add_argument('--max-new-tokens', type=int, default=256)
-    p.add_argument('--device-map', default='cuda:0')
+    p.add_argument('--device-map', default='cuda:0',
+                   help='Process-visible device (e.g. cuda:0 with CUDA_VISIBLE_DEVICES=1), or auto')
     p.add_argument('--dry-run', action='store_true')
     a = p.parse_args()
     if (not all(math.isfinite(v) for v in (a.interval, a.sample_fps, a.max_seconds))
@@ -136,8 +137,9 @@ def main():
     save_json(a.output_dir / 'config.json', config)
     if not a.dry_run:
         import torch
-        from transformers import AutoProcessor, Qwen3VLForConditionalGeneration
-        model = Qwen3VLForConditionalGeneration.from_pretrained(
+        from transformers import AutoProcessor, AutoModelForImageTextToText
+        # Select the multimodal architecture from config.json, not the directory name.
+        model = AutoModelForImageTextToText.from_pretrained(
             a.model_path, dtype='auto', device_map=a.device_map,
             attn_implementation='sdpa', local_files_only=True).eval()
         processor = AutoProcessor.from_pretrained(a.model_path, local_files_only=True)

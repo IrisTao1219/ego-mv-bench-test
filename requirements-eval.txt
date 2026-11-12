@@ -1,0 +1,6 @@
+# Official Qualcomm evaluator dependencies; install inference dependencies separately.
+torch>=2.6
+bert-score>=0.3.13
+rouge-score>=0.1.2
+datasets==3.3.2
+tqdm>=4.66
