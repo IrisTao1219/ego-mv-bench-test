@@ -1,0 +1,21 @@
+{
+  "video_id": "GX010021",
+  "pred_texts": [
+    "Instruct: Let's first preheat the oven to 350 degrees Fahrenheit.",
+    "Instruct: Get a bowl to mix the wet ingredients.",
+    "Instruct: Now crack two eggs and add them to the bowl.",
+    "Instruct: Now add half a cup of sugar to the bowl.",
+    "Instruct: Now add half cup of milk and whisk the mixture.",
+    "Instruct: Now mix in one cup of flour.",
+    "Instruct: Next, let's put half a cup of butter in a microwave-safe bowl and melt it in the microwave."
+  ],
+  "pred_timestamps": [
+    4.418,
+    17.0,
+    36.658,
+    89.108,
+    134.748,
+    231.088,
+    294.698
+  ]
+}
