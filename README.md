@@ -14,6 +14,10 @@ python -m pip install -r requirements.txt
 
 依赖参考[模型官方 Transformers 示例](https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct)。官方评测所需依赖见下方“官方指标”。
 
+模型通过 `AutoModelForImageTextToText` 根据本地 `config.json` 自动选择架构，支持 Qwen3-VL 和 Qwen3.5 多模态模型；目录名称不决定模型类型。Qwen3.5 需要支持该架构的 Transformers，本项目依赖已更新为 `transformers>=5.5.0,<6`，已有环境请运行 `python -m pip install -U -r requirements.txt`。
+
+`--device-map` 使用进程内可见 GPU 的编号。例如 `CUDA_VISIBLE_DEVICES=1` 只暴露物理 GPU 1，此时应传 `--device-map cuda:0`。多卡自动分配可使用 `--device-map auto`，仍受 `CUDA_VISIBLE_DEVICES` 限制。
+
 ## 数据准备
 
 ```text
