@@ -4,6 +4,9 @@ import copy
 import json
 import math
 import os
+import re
+
+from paper_prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
 from pathlib import Path
 import time
 
@@ -46,41 +49,35 @@ def recipe_steps(sample):
 
 
 def check_response(raw, field):
-    raw = raw.strip()
-    if raw.startswith('```'):
-        raw = raw.split('\n', 1)[1].rsplit('```', 1)[0].strip()
-    value = json.loads(raw)
-    if not isinstance(value, dict) or type(value.get(field)) is not bool:
-        raise ValueError(f'{field} must be a JSON boolean')
-    if not isinstance(value.get('reason'), str) or not value['reason'].strip():
-        raise ValueError('Nonempty reason required')
-    if field == 'mistake' and value[field] and not str(value.get('feedback', '')).strip():
-        raise ValueError('Corrective feedback required')
-    return value
+    """Parse Appendix D YES/NO responses; never infer NO from malformed output."""
+    if field not in ('completed', 'mistake'):
+        raise ValueError(f'Unknown decision field: {field}')
+    match = re.match(r'^(YES|NO)\b[.\s:!,-]*(.*)$', raw.strip(), re.DOTALL)
+    if not match:
+        raise ValueError('Response must begin with YES or NO')
+    positive = match.group(1) == 'YES'
+    explanation = match.group(2).strip()
+    if positive and not explanation:
+        raise ValueError('YES requires a completion explanation or corrective feedback')
+    return {field: positive, 'reason': explanation,
+            **({'feedback': explanation if positive else ''} if field == 'mistake' else {})}
 
 
-def prompt_for(stage, instruction, now, recent):
-    context = f'Current recipe step: {instruction}\nVideo observation time: {now:.3f}s. '
-    context += 'Images are timestamped in chronological order. Judge only this step from visible evidence. '
+def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed'):
+    """Fill paper placeholders only; now is logged separately, not added to the prompt."""
     if stage == 'completion':
-        return context + (
-            'Has the person successfully completed ALL requirements of this step? '
-            'Explain why, using observed actions. Do not assume unseen actions occurred. '
-            'Return only JSON, e.g. {"completed":false,"reason":"The action is still in progress."}. '
-            'completed must be a boolean; use true only when completion is supported.'
-        )
-    return context + (
-        'Has the person made, or are they about to make, a mistake that prevents completing this step? '
-        'Check ingredient quantities (too much, too little when they stop), preparation '
-        '(wrong size, shape or ingredient), technique (wrong tool or method), temperature '
-        '(wrong heat setting), and timing (too short or too long). '
-        'Intervene before an imminent irreversible mistake, or after a visible recoverable error. '
-        'Do not report generic safety advice or invent hidden mistakes. '
-        'Do not repeat the same mistake feedback already reported in the last 60 seconds: '
-        + json.dumps(recent) + '. '
-        'Return only JSON, e.g. {"mistake":false,"reason":"No error is visible.","feedback":""}. '
-        'If mistake is true, supply a concise actionable English correction in feedback.'
-    )
+        template = COMPLETION_PROMPT
+    elif stage == 'mistake':
+        if mistake_prompt not in ('detailed', 'simple'):
+            raise ValueError(f'Unknown mistake prompt: {mistake_prompt}')
+        template = (DETAILED_MISTAKE_PROMPT if mistake_prompt == 'detailed'
+                    else SIMPLE_MISTAKE_PROMPT)
+    else:
+        raise ValueError(f'Unknown stage: {stage}')
+    # Only model-generated feedback text belongs in this array, never reference labels.
+    feedbacks = [entry['feedback'] for entry in recent]
+    return template.replace('[prev_detected_mistakes]', json.dumps(feedbacks, ensure_ascii=False)).replace(
+        '[recipe_step]', instruction)
 
 
 def main():
@@ -93,7 +90,9 @@ def main():
     p.add_argument('--video-ids', nargs='+')
     p.add_argument('--limit', type=int, default=1)
     p.add_argument('--max-seconds', type=float, default=0, help='Absolute video cutoff, 0 = all')
-    p.add_argument('--interval', type=float, default=5)
+    p.add_argument('--interval', type=float, default=5, help='Paper: 5 seconds; changing this is a protocol deviation')
+    p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed',
+                   help='Appendix D: detailed for Qwen3-VL/Qwen3.5/Gemini; simple for older baselines')
     p.add_argument('--sample-fps', type=float, default=1)
     p.add_argument('--max-frames', type=int, default=32, help='Uniformly sample the observed step prefix')
     p.add_argument('--max-side', type=int, default=448)
@@ -114,7 +113,9 @@ def main():
     a.output_dir.mkdir(parents=True, exist_ok=a.overwrite)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(protocol='per_recipe_step', reference='arXiv:2606.09547v2',
-                  prompt_version='completion_then_mistake_v1_adapted', trained_on_ego_comist=False)
+                  prompt_version='arxiv_2606.09547v2_appendix_D_verbatim',
+                  response_format='YES_NO', paper_interval_seconds=5,
+                  interval_matches_paper=(a.interval == 5), trained_on_ego_comist=False)
     save_json(a.output_dir / 'config.json', config)
     if not a.dry_run:
         import torch
@@ -187,7 +188,7 @@ def main():
                         recent = [r for r in recent if requested-r['time'] <= 60]
                         event = None
                         for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
-                            prompt = prompt_for(stage, step['instruction'], requested, recent)
+                            prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt)
                             messages = [{'role': 'user', 'content': content + [{'type': 'text', 'text': prompt}]}]
                             input_log.write(json.dumps({
                                 'video_id': video_id, 'step_id': step_id,
@@ -229,7 +230,7 @@ def main():
                             result['pred_texts'].append(event)
                             result['pred_timestamps'].append(requested)
                             if event.startswith('Feedback:'):
-                                recent.append({'time': requested, 'feedback': event})
+                                recent.append({'time': requested, 'feedback': parsed['feedback'].strip()})
                         print(f'{video_id} step={step_id} {requested:.2f}s: {event or "None"}', flush=True)
                         save_json(a.output_dir / f'{video_id}.prediction.json', result)
                         if event and event.startswith('Success:'):

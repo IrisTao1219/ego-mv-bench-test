@@ -1,5 +1,6 @@
 import unittest
 from run_inference import recipe_steps, check_response, prompt_for
+from paper_prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
 
 
 class InferenceTests(unittest.TestCase):
@@ -13,14 +14,42 @@ class InferenceTests(unittest.TestCase):
         for stage in ('completion', 'mistake'):
             self.assertNotIn('SECRET', prompt_for(stage, steps[0]['instruction'], 22, []))
 
-    def test_strict_decision(self):
-        self.assertFalse(check_response('{"completed":false,"reason":"Still pouring"}', 'completed')['completed'])
-        for raw in ('{"completed":"false","reason":"x"}', '[]',
-                    '{"completed":true,"reason":""}'):
-            with self.assertRaises(ValueError):
-                check_response(raw, 'completed')
+    def test_paper_responses(self):
+        for field in ('completed', 'mistake'):
+            self.assertFalse(check_response('NO', field)[field])
+            self.assertFalse(check_response('NO. Still working.', field)[field])
+            self.assertTrue(check_response(' YES. The bowl contains three spoonfuls. ', field)[field])
+        self.assertEqual(check_response('YES. Add one more spoonful.', 'mistake')['feedback'],
+                         'Add one more spoonful.')
+        self.assertEqual(check_response('YES\nThe oven is set.', 'completed')['reason'],
+                         'The oven is set.')
+
+    def test_malformed_response_is_not_negative(self):
+        for field in ('completed', 'mistake'):
+            for raw in ('YES', 'YES.', 'Yesterday it was done', 'Not yet',
+                        '{"completed":false,"reason":"Still pouring"}',
+                        '```text\nNO\n```', ''):
+                with self.subTest(field=field, raw=raw), self.assertRaises(ValueError):
+                    check_response(raw, field)
+
+    def test_exact_prompt_substitution(self):
+        self.assertEqual(prompt_for('completion', 'Get a bowl', 42, []),
+                         COMPLETION_PROMPT.replace('[recipe_step]', 'Get a bowl'))
+        recent = [{'time': 40, 'feedback': 'Add one more spoonful.'}]
+        expected = DETAILED_MISTAKE_PROMPT.replace('[recipe_step]', 'Add oil').replace(
+            '[prev_detected_mistakes]', '["Add one more spoonful."]')
+        self.assertEqual(prompt_for('mistake', 'Add oil', 42, recent), expected)
+        self.assertEqual(prompt_for('mistake', 'Add oil', 42, recent, 'simple'),
+                         SIMPLE_MISTAKE_PROMPT.replace('[recipe_step]', 'Add oil'))
+        self.assertNotIn('Video observation time', expected)
+
+    def test_invalid_stage_and_variant(self):
         with self.assertRaises(ValueError):
-            check_response('{"mistake":true,"reason":"Too much"}', 'mistake')
+            prompt_for('unknown', 'x', 0, [])
+        with self.assertRaises(ValueError):
+            prompt_for('mistake', 'x', 0, [], 'unknown')
+        with self.assertRaises(ValueError):
+            check_response('NO', 'unknown')
 
 
 if __name__ == '__main__':
