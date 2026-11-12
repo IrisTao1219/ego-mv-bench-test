@@ -138,3 +138,9 @@ python -m unittest test_inference
 ## 论文协议复核
 
 依据[正文第 5 节](https://arxiv.org/html/2606.09547v2#S5)和[附录 D](https://arxiv.org/html/2606.09547v2#A4)：每 5 秒先检查完成；未完成才检查错误；详细错误提示使用最近 60 秒模型反馈防重复。完成检测明确要求肯定时解释依据，错误检测明确要求肯定时直接向用户提供简短反馈。这两类文本含义不同，不能把完成解释当作纠错反馈。此前追加的 JSON 输出契约已移除。论文未公开具体解析与 Success 序列化实现，本文实现选择不应称为作者原始实现。
+
+### Qwen3.5 重跑与输出诊断
+
+推理时显式传入 `enable_thinking=False`，使支持该开关的聊天模板直接生成最终 YES/NO 答案；论文提示词和严格解析规则保持不变。`config.json` 记录该开关、模型/processor 类型、Transformers 和 PyTorch 版本。每条推理日志增加 `generated_tokens` 和 `hit_token_limit`（达到生成上限且末尾不是 EOS），用于区分输出截断与格式错误。
+
+建议先使用新目录执行 `--max-seconds 30` 短跑，确认 `raw_response` 以 YES/NO 开头且 `parse_error` 为 null，再去掉时间限制完成整段视频。旧输出目录需要 `--overwrite`，会覆盖该次运行文件。Qwen3-VL-30B 的乱码原因尚未定位，关闭思考不能视为对其乱码的修复；先短跑检查并保留新增环境信息。

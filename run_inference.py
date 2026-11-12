@@ -132,10 +132,11 @@ def main():
                   prompt_version='arxiv_2606.09547v2_appendix_D_verbatim',
                   paper_prompt_verbatim=True,
                   success_message_policy='fixed_confirmation_reason_logged_only',
-                  response_format='YES_NO', paper_interval_seconds=5,
+                  response_format='YES_NO', enable_thinking=False, paper_interval_seconds=5,
                   interval_matches_paper=(a.interval == 5), trained_on_ego_comist=False)
     save_json(a.output_dir / 'config.json', config)
     if not a.dry_run:
+        import transformers
         import torch
         from transformers import AutoProcessor, AutoModelForImageTextToText
         # Select the multimodal architecture from config.json, not the directory name.
@@ -143,6 +144,10 @@ def main():
             a.model_path, dtype='auto', device_map=a.device_map,
             attn_implementation='sdpa', local_files_only=True).eval()
         processor = AutoProcessor.from_pretrained(a.model_path, local_files_only=True)
+        config.update(transformers_version=transformers.__version__, torch_version=torch.__version__,
+                      model_class=type(model).__name__, processor_class=type(processor).__name__,
+                      model_type=model.config.model_type)
+        save_json(a.output_dir / 'config.json', config)
         generation = copy.deepcopy(model.generation_config)
         generation.do_sample = False
         generation.temperature = generation.top_p = generation.top_k = None
@@ -217,18 +222,24 @@ def main():
                             }, ensure_ascii=False) + '\n')
                             input_log.flush()
                             raw, error, parsed = '', None, None
+                            generated_tokens, hit_token_limit = None, None
                             began = time.monotonic()
                             if not a.dry_run:
                                 inputs = processor.apply_chat_template(
                                     messages,
                                     tokenize=True, add_generation_prompt=True, return_dict=True,
-                                    return_tensors='pt').to(model.device)
+                                    return_tensors='pt', enable_thinking=False).to(model.device)
                                 with torch.inference_mode():
                                     ids = model.generate(**inputs, generation_config=generation,
                                                          do_sample=False, num_beams=1,
                                                          max_new_tokens=a.max_new_tokens)
-                                raw = processor.batch_decode(ids[:, inputs.input_ids.shape[1]:],
-                                                             skip_special_tokens=True)[0]
+                                output_ids = ids[:, inputs.input_ids.shape[1]:]
+                                generated_tokens = output_ids.shape[1]
+                                eos_ids = generation.eos_token_id
+                                eos_ids = ([eos_ids] if isinstance(eos_ids, int) else eos_ids) or []
+                                ended_with_eos = bool(generated_tokens and output_ids[0, -1].item() in eos_ids)
+                                hit_token_limit = generated_tokens >= a.max_new_tokens and not ended_with_eos
+                                raw = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
                                 try:
                                     parsed = check_response(raw, field)
                                 except (ValueError, TypeError, IndexError) as exc:
@@ -239,6 +250,7 @@ def main():
                                 'timestamp': requested, 'frame_timestamps': timestamps, 'stage': stage,
                                 'prompt': prompt, 'raw_response': raw, 'parsed': parsed,
                                 'parse_error': error, 'accepted': event,
+                                'generated_tokens': generated_tokens, 'hit_token_limit': hit_token_limit,
                                 'latency_seconds': time.monotonic()-began})+'\n')
                             log.flush()
                             # On malformed completion, do not silently treat it as false.
