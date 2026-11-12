@@ -3,11 +3,37 @@
   "pred_texts": [
     "Instruct: Let's first preheat the oven to 350 degrees Fahrenheit.",
     "Instruct: Get a bowl to mix the wet ingredients.",
-    "Instruct: Now crack two eggs and add them to the bowl."
+    "Instruct: Now crack two eggs and add them to the bowl.",
+    "Success: Step complete.",
+    "Instruct: Now add half a cup of sugar to the bowl.",
+    "Instruct: Now add half cup of milk and whisk the mixture.",
+    "Success: Step complete.",
+    "Instruct: Now mix in one cup of flour.",
+    "Instruct: Next, let's put half a cup of butter in a microwave-safe bowl and melt it in the microwave.",
+    "Success: Step complete.",
+    "Instruct: Now let's whisk the cake mixture until everything is mixed well.",
+    "Instruct: Now let's transfer the mixture to the baking tray.",
+    "Instruct: Now let's transfer the mixture to the baking tray.",
+    "Instruct: Now let's pour the mixture into the tray.",
+    "Instruct: Now let's put the tray in the oven.",
+    "Success: Step complete."
   ],
   "pred_timestamps": [
     4.418,
     17.0,
-    36.658
+    36.658,
+    76.658,
+    89.108,
+    134.748,
+    214.748,
+    231.088,
+    294.698,
+    399.698,
+    432.658,
+    526.0,
+    581.0,
+    630.612,
+    686.478,
+    691.478
   ]
 }
