@@ -71,12 +71,23 @@ CUDA_VISIBLE_DEVICES=0 python run_inference.py \
 ## 官方指标
 
 ```bash
-python -m pip install bert-score rouge-score datasets tqdm
+python -m pip install -r requirements-eval.txt
 CUDA_VISIBLE_DEVICES=0 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
   --predictions outputs/qwen3vl-one/predictions.json \
   --report outputs/qwen3vl-one/official-report.txt
 ```
+
+评分代码已合并在本仓库 `vendor/`，无需相邻的 `qualcomm_interactive_cooking_eval` 目录。`vendor/data.py`、`vendor/eval.py`、`vendor/utils.py` 和许可与源目录一致。
+
+先检查预测格式和视频覆盖（无需加载模型、CUDA 或评分依赖）：
+
+```bash
+python evaluate_official.py --data-root ../datasets/ego-mc-bench \
+  --predictions outputs/qwen3vl-one/predictions.json --check-only
+```
+
+正式评分可加 `--require-full-coverage`，缺少视频时会直接报错。该选项仅检查视频 ID 覆盖，仍需自行确认没有使用截断或 dry-run 预测。报告路径必须尚不存在，避免覆盖已有报告。
 
 官方指标使用 CUDA RoBERTa-large BERTScore，首次需要下载其权重。报告包括 IC-Acc、Mistake Precision/Recall/F1、BERTScore、ROUGE-L。官方代码条件为绝对时间差 <15 秒，对应论文所说的 30 秒窗口。predictions 中的 Instruct: 是给定指令，不是模型生成；使用该前缀是因为官方解析用它移除指令前缀。
 
