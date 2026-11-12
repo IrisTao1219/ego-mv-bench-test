@@ -25,7 +25,7 @@ def main():
         if not texts or len(texts) != len(times) or times != sorted(times):
             p.error('Predictions must be nonempty, aligned and chronological')
         if not texts[0].startswith('Instruct:'):
-            p.error('Use run_paper.py outputs (first event must be Instruct:)')
+            p.error('Use run_inference.py outputs (first event must be Instruct:)')
     if not predictions:
         p.error('No predictions')
     # Official run() scores only submitted videos. Never silently call this full-dataset coverage.

@@ -1,33 +1,26 @@
 import unittest
-from run_inference import frame_indices, parse_answer, build_prompt, is_recent_duplicate
+from run_inference import recipe_steps, check_response, prompt_for
 
 
-class ProtocolTests(unittest.TestCase):
-    def test_prompt_does_not_offer_pipe_type(self):
-        self.assertNotIn('Instruction|Feedback|Success|None', build_prompt(0, []))
-        with self.assertRaises(ValueError):
-            parse_answer('{"type":"Instruction|Feedback|Success|None","text":"x"}')
+class InferenceTests(unittest.TestCase):
+    def test_no_reference_feedback_in_prompt(self):
+        sample = {'texts': ['Get a bowl', 'SECRET correction', 'Great', 'Crack eggs'],
+                  'text_types': ['Instruction', 'Feedback', 'Success', 'Instruction'],
+                  'text_timestamps': [17., 24., 34., 36.]}
+        steps = recipe_steps(sample)
+        self.assertEqual(steps, [{'instruction': 'Get a bowl', 'start': 17.},
+                                 {'instruction': 'Crack eggs', 'start': 36.}])
+        for stage in ('completion', 'mistake'):
+            self.assertNotIn('SECRET', prompt_for(stage, steps[0]['instruction'], 22, []))
 
-    def test_duplicate_window(self):
-        history = [{'time': 0, 'message': 'Success: Done.'}]
-        self.assertTrue(is_recent_duplicate('success:  DONE.', 5, history))
-        self.assertFalse(is_recent_duplicate('Success: Done.', 31, history))
-        self.assertFalse(is_recent_duplicate('Feedback: Stop.', 5, history))
-
-    def test_causal_sampling(self):
-        for current in (0, 1, 30, 301):
-            indices = frame_indices(current, 30, 4, 10)
-            self.assertLessEqual(len(indices), 4)
-            self.assertEqual(indices[-1], current)
-            self.assertTrue(all(0 <= i <= current for i in indices))
-
-    def test_response_protocol(self):
-        self.assertEqual(parse_answer('```json\n{"type":"Feedback","text":"Stop."}\n```'),
-                         ('Feedback', 'Stop.'))
-        self.assertEqual(parse_answer('{"type":"None","text":""}'), ('None', ''))
-        for value in ('[]', '{"type":"Oops","text":"x"}', '{"type":"Feedback","text":""}'):
+    def test_strict_decision(self):
+        self.assertFalse(check_response('{"completed":false,"reason":"Still pouring"}', 'completed')['completed'])
+        for raw in ('{"completed":"false","reason":"x"}', '[]',
+                    '{"completed":true,"reason":""}'):
             with self.assertRaises(ValueError):
-                parse_answer(value)
+                check_response(raw, 'completed')
+        with self.assertRaises(ValueError):
+            check_response('{"mistake":true,"reason":"Too much"}', 'mistake')
 
 
 if __name__ == '__main__':
