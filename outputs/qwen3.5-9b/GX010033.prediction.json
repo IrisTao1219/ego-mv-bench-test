@@ -1,0 +1,29 @@
+{
+  "video_id": "GX010033",
+  "pred_texts": [
+    "Instruct: First, get a baguette and slice four half-inch thick pieces from it.",
+    "Instruct: Next, toast the baguette slices in the toaster. Toast until golden brown usually around 1 minute.",
+    "Instruct: Now, brush each toast lightly with some olive oil.",
+    "Instruct: Now, dice half a tomato.",
+    "Instruct: Now, cut four slices of fresh mozzarella as a topping for your toasts.",
+    "Instruct: Now, get some basil.",
+    "Instruct: You need to now wash the basil and chop it into small pieces.",
+    "Instruct: Now, mix the tomatoes and the basil together and add some salt.",
+    "Instruct: Now, get a baguette slice and put a slice of mozzarella on top.",
+    "Instruct: Next add the toppings of tomato and basil on the baguette slice such that it covers it.",
+    "Instruct: Now, repeat the previous step for all your toasts."
+  ],
+  "pred_timestamps": [
+    4.188,
+    53.408,
+    130.508,
+    163.898,
+    214.818,
+    255.648,
+    261.838,
+    306.738,
+    327.458,
+    342.068,
+    352.698
+  ]
+}

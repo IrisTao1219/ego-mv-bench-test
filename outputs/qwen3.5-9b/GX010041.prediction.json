@@ -1,0 +1,41 @@
+{
+  "video_id": "GX010041",
+  "pred_texts": [
+    "Instruct: Grab two slices of bread and put them in the toaster. Toast for around a minute.",
+    "Success: Step complete.",
+    "Instruct: Now get the pizza sauce and spread two tablespoons on each slice of bread.",
+    "Feedback: You are spreading the sauce on only one slice of bread so far. The instruction requires you to spread two tablespoons on *each* slice, so you need to ensure you apply the sauce to the second slice as well.",
+    "Feedback: You are currently spreading the sauce on only one slice of bread. The instruction requires you to spread two tablespoons on *each* slice, so you need to ensure you apply the sauce to the second slice as well.",
+    "Feedback: You are currently spreading the sauce on only one slice of bread. The instruction requires you to spread two tablespoons on *each* slice, so you need to ensure you apply the sauce to the second slice as well.",
+    "Feedback: You are currently spreading the sauce on only one slice of bread. The instruction requires you to spread two tablespoons on *each* slice, so you need to ensure you apply the sauce to the second slice as well.",
+    "Instruct: Now spread it evenly on the bread.",
+    "Feedback: You are spreading the sauce on the second slice of bread, but you are leaving a significant portion of the surface uncovered. To spread it evenly as instructed, you should ensure the entire surface of the bread is covered with the sauce.",
+    "Feedback: You are spreading the sauce on the second slice of bread, but you are leaving a significant portion of the surface uncovered. To spread it evenly as instructed, you should ensure the entire surface of the bread is covered with the sauce.",
+    "Feedback: You are spreading the sauce on the second slice of bread, but you are leaving a significant portion of the surface uncovered. To spread it evenly as instructed, you should ensure the entire surface of the bread is covered with the sauce.",
+    "Feedback: You are spreading the sauce on the second slice of bread, but you are leaving a significant portion of the surface uncovered. To spread it evenly as instructed, you should ensure the entire surface of the bread is covered with the sauce.",
+    "Feedback: You are spreading the sauce on the second slice of bread, but you are leaving a significant portion of the surface uncovered. To spread it evenly as instructed, you should ensure the entire surface of the bread is covered with the sauce.",
+    "Instruct: Now cover each slice of bread with shredded mozzarella cheese.",
+    "Instruct: Add some oregano on top of the cheese toast according to your taste.",
+    "Instruct: Now add at least 3 to 4 olives to the top of the cheese toasts.",
+    "Instruct: Now microwave the cheese toast in a microwave-safe utensil for around 45 to 60 seconds."
+  ],
+  "pred_timestamps": [
+    1.0,
+    21.0,
+    91.0,
+    126.0,
+    131.0,
+    136.0,
+    141.0,
+    142.024,
+    147.024,
+    152.024,
+    157.024,
+    162.024,
+    167.024,
+    171.5,
+    226.012,
+    256.0,
+    313.024
+  ]
+}

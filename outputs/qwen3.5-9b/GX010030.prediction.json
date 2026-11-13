@@ -1,0 +1,33 @@
+{
+  "video_id": "GX010030",
+  "pred_texts": [
+    "Instruct: Get a one pound of broccoli and cut the florets.",
+    "Instruct: Now get a bell pepper and chop it into small pieces.",
+    "Success: Step complete.",
+    "Instruct: Now take a pan and oil and add oil to the pan.",
+    "Instruct: Now turn on the stove.",
+    "Instruct: Now add the cut broccoli to the pan.",
+    "Instruct: Now add the cut bell pepper.",
+    "Instruct: Now cut a beetroot and add it to the pan.",
+    "Instruct: Now add approx 1 cup of spinach to the pan.",
+    "Success: Step complete.",
+    "Instruct: Now you need to stir the contents of the pan and add salt to taste to the pan.",
+    "Instruct: Now add pepper to taste.",
+    "Success: Step complete."
+  ],
+  "pred_timestamps": [
+    8.235,
+    20.955,
+    180.95499999999998,
+    184.365,
+    220.105,
+    230.815,
+    277.565,
+    297.115,
+    327.515,
+    337.515,
+    340.315,
+    377.255,
+    397.255
+  ]
+}
