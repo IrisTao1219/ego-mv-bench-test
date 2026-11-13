@@ -16,13 +16,19 @@ def save_json(path, value):
     os.replace(temporary, path)
 
 
-def load_samples(root, video_ids, limit):
+def load_samples(root, video_ids, limit, start_video_id=None):
     samples = json.loads((root / 'annotations/annotations.json').read_text())
     if not isinstance(samples, list) or not samples:
         raise ValueError('Annotations must be a nonempty list')
     ids = [s['video_id'] for s in samples]
     if len(ids) != len(set(ids)):
         raise ValueError('Duplicate video IDs')
+    if start_video_id is not None:
+        if video_ids:
+            raise ValueError('--start-video-id cannot be combined with --video-ids')
+        if start_video_id not in ids:
+            raise ValueError(f'Unknown start video ID: {start_video_id}')
+        samples = samples[ids.index(start_video_id):]
     if video_ids:
         unknown = set(video_ids) - set(ids)
         if unknown:
@@ -103,6 +109,7 @@ def main():
     p.add_argument('--overwrite', action='store_true',
                    help='Allow an existing output directory; replace files produced by this run')
     p.add_argument('--video-ids', nargs='+')
+    p.add_argument('--start-video-id', help='Start at this video (inclusive), in annotation order; use --limit 0 for all remaining videos')
     p.add_argument('--limit', type=int, default=1)
     p.add_argument('--max-seconds', type=float, default=0, help='Absolute video cutoff, 0 = all')
     p.add_argument('--interval', type=float, default=5, help='Paper: 5 seconds; changing this is a protocol deviation')
@@ -125,7 +132,7 @@ def main():
             or min(a.interval, a.sample_fps) <= 0 or a.max_seconds < 0
             or a.max_frames < 1 or a.max_side < 32 or a.limit < 0 or a.max_new_tokens < 1):
         p.error('Invalid sampling parameters')
-    samples = load_samples(a.data_root, a.video_ids, a.limit)
+    samples = load_samples(a.data_root, a.video_ids, a.limit, a.start_video_id)
     for s in samples:
         if not recipe_steps(s):
             raise ValueError(f"No instructions: {s['video_id']}")
