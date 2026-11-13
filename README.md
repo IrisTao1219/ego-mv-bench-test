@@ -64,8 +64,13 @@ python run_inference.py --data-root ../datasets/ego-mc-bench \
 ```bash
 CUDA_VISIBLE_DEVICES=1 python run_inference.py \
   --data-root ../datasets/ego-mc-bench \
-  --model-path /home/Data/Hf_model/Qwen3.5-9B \
-  --device-map cuda:0 --output-dir outputs/qwen3.5-9b-one --limit 0 --overwrite
+  --model-path ../datasets/Hf_model/Qwen3-VL-30B-Instruct \
+  --device-map cuda:0 --output-dir outputs/qwen3-vl-30b-one --limit 1 --overwrite
+
+CUDA_VISIBLE_DEVICES=1 python run_inference.py \
+  --data-root ../datasets/ego-mc-bench \
+  --model-path ../datasets/Hf_model/Qwen3.5-27B \
+  --device-map cuda:0 --output-dir outputs/qwen3.5-27b --limit 0
 ```
 
 全量将 --limit 设为 0，并使用新的输出目录。显存不足可降低 --max-frames，但这改变实验配置，需重新记录。max-seconds 截断运行只做排错，不用于正式计分。
