@@ -65,7 +65,7 @@ python run_inference.py --data-root ../datasets/ego-mc-bench \
 CUDA_VISIBLE_DEVICES=1 python run_inference.py \
   --data-root ../datasets/ego-mc-bench \
   --model-path /home/Data/Hf_model/Qwen3.5-9B \
-  --device-map cuda:0 --output-dir outputs/qwen3.5-9b-one --limit 1 --overwrite
+  --device-map cuda:0 --output-dir outputs/qwen3.5-9b-one --limit 0 --overwrite
 ```
 
 全量将 --limit 设为 0，并使用新的输出目录。显存不足可降低 --max-frames，但这改变实验配置，需重新记录。max-seconds 截断运行只做排错，不用于正式计分。
@@ -74,10 +74,10 @@ CUDA_VISIBLE_DEVICES=1 python run_inference.py \
 
 ```bash
 python -m pip install -r requirements-eval.txt
-CUDA_VISIBLE_DEVICES=0 python evaluate_official.py \
+CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
-  --predictions outputs/qwen3vl-one/predictions.json \
-  --report outputs/qwen3vl-one/official-report.txt
+  --predictions outputs/qwen3.5-9b/predictions.json \
+  --report outputs/qwen3.5-9b/official-report.txt
 ```
 
 评分代码已合并在本仓库 `vendor/`，无需相邻的 `qualcomm_interactive_cooking_eval` 目录。`vendor/data.py`、`vendor/eval.py`、`vendor/utils.py` 和许可与源目录一致。
