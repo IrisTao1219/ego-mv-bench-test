@@ -72,6 +72,20 @@ CUDA_VISIBLE_DEVICES=1 python run_inference.py \
 
 ## 官方指标
 
+### 中断后按视频续跑
+
+使用 `--start-video-id` 从指定视频开头重新运行，包含该视频，并按 `annotations.json` 中的顺序继续。添加 `--limit 0` 跑完剩余所有视频；不能与 `--video-ids` 同时使用。模型、采样、思考模式等参数应与原实验一致。
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python run_inference.py \
+  --data-root ../datasets/ego-mc-bench \
+  --model-path /home/Data/Hf_model/Qwen3.5-9B \
+  --device-map cuda:0 --output-dir outputs/qwen3.5-9b-continued \
+  --start-video-id GX010021 --limit 0
+```
+
+请使用新的输出目录保留旧结果。新目录的 `predictions.json` 只包含本次视频；正式评测前需与旧目录中已完成且位于起始视频之前的结果合并，相同视频采用本次完整重跑结果。不要用同一输出目录加 `--overwrite` 来保留总预测：它会重写 `predictions.json`。
+
 ```bash
 python -m pip install -r requirements-eval.txt
 CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
