@@ -146,6 +146,14 @@ python -m unittest test_inference
 
 ### Qwen3.5 重跑与输出诊断
 
-推理时显式传入 `enable_thinking=False`，使支持该开关的聊天模板直接生成最终 YES/NO 答案；论文提示词和严格解析规则保持不变。`config.json` 记录该开关、模型/processor 类型、Transformers 和 PyTorch 版本。每条推理日志增加 `generated_tokens` 和 `hit_token_limit`（达到生成上限且末尾不是 EOS），用于区分输出截断与格式错误。
+通过 `--thinking` 选择聊天模板的思考模式：
+
+- `--thinking off`（默认）：传入 `enable_thinking=False`，延续此前关闭思考的设置。
+- `--thinking on`：传入 `enable_thinking=True`，用于支持该开关的模型（如 Qwen3.5）。
+- `--thinking default`：不传 `enable_thinking`，使用本地模型聊天模板的默认行为。Qwen3.5 官方模板默认开启思考；Qwen3-VL-Instruct 不使用此开关，建议选择 `default` 以避免不支持参数的警告。
+
+例如，在上方推理命令末尾添加 `--thinking on` 即可测试开启思考的 Qwen3.5。这个开关通过 `processor.apply_chat_template()` 传入，实际行为取决于本地聊天模板；不能为不支持它的模型开启思考。论文未披露思考模式设置，所选模式属于本地实验配置。
+
+论文提示词和严格解析规则保持不变。开启思考可能先生成推理内容而非 YES/NO，或耗尽 `--max-new-tokens` 预算，因此可能出现解析失败；当前代码不会自动剥离思考内容。`config.json` 记录 `thinking`、`enable_thinking`（`default` 时为 null）、实际传入的 `chat_template_kwargs`、模型/processor 类型、Transformers 和 PyTorch 版本。每条推理日志增加 `generated_tokens` 和 `hit_token_limit`（达到生成上限且末尾不是 EOS），用于区分输出截断与格式错误。
 
 建议先使用新目录执行 `--max-seconds 30` 短跑，确认 `raw_response` 以 YES/NO 开头且 `parse_error` 为 null，再去掉时间限制完成整段视频。旧输出目录需要 `--overwrite`，会覆盖该次运行文件。Qwen3-VL-30B 的乱码原因尚未定位，关闭思考不能视为对其乱码的修复；先短跑检查并保留新增环境信息。

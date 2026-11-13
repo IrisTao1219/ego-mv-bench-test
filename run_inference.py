@@ -112,10 +112,15 @@ def main():
     p.add_argument('--max-frames', type=int, default=32, help='Uniformly sample the observed step prefix')
     p.add_argument('--max-side', type=int, default=448)
     p.add_argument('--max-new-tokens', type=int, default=256)
+    p.add_argument('--thinking', choices=('default', 'on', 'off'), default='off',
+                   help='Chat-template thinking mode: default = omit the switch; on/off = explicit '
+                        'enable_thinking (requires template support). Default: off, as before')
     p.add_argument('--device-map', default='cuda:0',
                    help='Process-visible device (e.g. cuda:0 with CUDA_VISIBLE_DEVICES=1), or auto')
     p.add_argument('--dry-run', action='store_true')
     a = p.parse_args()
+    template_kwargs = ({} if a.thinking == 'default'
+                       else {'enable_thinking': a.thinking == 'on'})
     if (not all(math.isfinite(v) for v in (a.interval, a.sample_fps, a.max_seconds))
             or min(a.interval, a.sample_fps) <= 0 or a.max_seconds < 0
             or a.max_frames < 1 or a.max_side < 32 or a.limit < 0 or a.max_new_tokens < 1):
@@ -132,7 +137,8 @@ def main():
                   prompt_version='arxiv_2606.09547v2_appendix_D_verbatim',
                   paper_prompt_verbatim=True,
                   success_message_policy='fixed_confirmation_reason_logged_only',
-                  response_format='YES_NO', enable_thinking=False, paper_interval_seconds=5,
+                  response_format='YES_NO', enable_thinking=template_kwargs.get('enable_thinking'),
+                  chat_template_kwargs=template_kwargs, paper_interval_seconds=5,
                   interval_matches_paper=(a.interval == 5), trained_on_ego_comist=False)
     save_json(a.output_dir / 'config.json', config)
     if not a.dry_run:
@@ -228,7 +234,7 @@ def main():
                                 inputs = processor.apply_chat_template(
                                     messages,
                                     tokenize=True, add_generation_prompt=True, return_dict=True,
-                                    return_tensors='pt', enable_thinking=False).to(model.device)
+                                    return_tensors='pt', **template_kwargs).to(model.device)
                                 with torch.inference_mode():
                                     ids = model.generate(**inputs, generation_config=generation,
                                                          do_sample=False, num_beams=1,
