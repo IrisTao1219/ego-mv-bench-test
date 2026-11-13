@@ -1,10 +1,10 @@
 {
   "data_root": "../datasets/ego-mc-bench",
   "model_path": "../datasets/Hf_model/Qwen3-VL-30B-Instruct",
-  "output_dir": "outputs/qwen3vl-30b-one",
-  "overwrite": true,
+  "output_dir": "outputs/qwen3-vl-30b",
+  "overwrite": false,
   "video_ids": null,
-  "limit": 1,
+  "limit": 0,
   "max_seconds": 0,
   "interval": 5,
   "mistake_prompt": "detailed",
@@ -12,6 +12,7 @@
   "max_frames": 32,
   "max_side": 448,
   "max_new_tokens": 256,
+  "thinking": "off",
   "device_map": "cuda:0",
   "dry_run": false,
   "protocol": "per_recipe_step",
@@ -20,7 +21,16 @@
   "paper_prompt_verbatim": true,
   "success_message_policy": "fixed_confirmation_reason_logged_only",
   "response_format": "YES_NO",
+  "enable_thinking": false,
+  "chat_template_kwargs": {
+    "enable_thinking": false
+  },
   "paper_interval_seconds": 5,
   "interval_matches_paper": true,
-  "trained_on_ego_comist": false
+  "trained_on_ego_comist": false,
+  "transformers_version": "5.22.2",
+  "torch_version": "2.11.0+cu128",
+  "model_class": "Qwen3VLMoeForConditionalGeneration",
+  "processor_class": "Qwen3VLProcessor",
+  "model_type": "qwen3_vl_moe"
 }
