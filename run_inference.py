@@ -101,6 +101,41 @@ def prediction_event(parsed, field):
     return 'Feedback: ' + parsed['feedback']
 
 
+def observed_frame_indices(start, requested, fps, count, sample_fps, max_frames=0):
+    """Sample on a timestamp grid (also accurate for fractional source FPS)."""
+    first = math.ceil(start * fps)
+    current = min(count - 1, math.floor(requested * fps))
+    indices = sorted({max(first, min(current, math.floor((start + tick / sample_fps) * fps)))
+                      for tick in range(math.floor((requested - start) * sample_fps) + 1)
+                      if start + tick / sample_fps <= requested})
+    if first > current:
+        return []
+    if not indices or indices[-1] != current:
+        indices.append(current)
+    if max_frames and len(indices) > max_frames:
+        indices = ([indices[round(i * (len(indices) - 1) / (max_frames - 1))]
+                    for i in range(max_frames)] if max_frames > 1 else [current])
+    return indices
+
+
+def configure_generation(generation, token_limit):
+    """Remove inherited length/time budgets; keep the model's EOS termination."""
+    import sys
+    generation.max_new_tokens = token_limit or None
+    # Transformers requires an integer max_length. This sentinel disables its
+    # default 20-token budget without allocating a buffer of this size.
+    generation.max_length = sys.maxsize
+    generation.max_time = None
+    generation.min_length = 0
+    generation.min_new_tokens = None
+    generation.forced_eos_token_id = None
+
+
+def generation_limits(token_limit):
+    import sys
+    return {'max_new_tokens': token_limit or None, 'max_length': sys.maxsize}
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--data-root', type=Path, required=True)
@@ -112,13 +147,13 @@ def main():
     p.add_argument('--start-video-id', help='Start at this video (inclusive), in annotation order; use --limit 0 for all remaining videos')
     p.add_argument('--limit', type=int, default=1)
     p.add_argument('--max-seconds', type=float, default=0, help='Absolute video cutoff, 0 = all')
-    p.add_argument('--interval', type=float, default=5, help='Paper: 5 seconds; changing this is a protocol deviation')
+    p.add_argument('--interval', type=float, default=0.5, help='Frame-level query cadence; paper baseline used 5 seconds')
     p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed',
                    help='Appendix D: detailed for Qwen3-VL/Qwen3.5/Gemini; simple for older baselines')
-    p.add_argument('--sample-fps', type=float, default=1)
-    p.add_argument('--max-frames', type=int, default=32, help='Uniformly sample the observed step prefix')
-    p.add_argument('--max-side', type=int, default=448)
-    p.add_argument('--max-new-tokens', type=int, default=256)
+    p.add_argument('--sample-fps', type=float, default=2)
+    p.add_argument('--max-frames', type=int, default=0, help='0 = complete observed step prefix; positive = uniform frame cap')
+    p.add_argument('--max-side', type=int, default=224, help='Square input image size')
+    p.add_argument('--max-new-tokens', type=int, default=0, help='0 = EOS-only generation; positive = token cap')
     p.add_argument('--thinking', choices=('default', 'on', 'off'), default='off',
                    help='Chat-template thinking mode: default = omit the switch; on/off = explicit '
                         'enable_thinking (requires template support). Default: off, as before')
@@ -130,7 +165,7 @@ def main():
                        else {'enable_thinking': a.thinking == 'on'})
     if (not all(math.isfinite(v) for v in (a.interval, a.sample_fps, a.max_seconds))
             or min(a.interval, a.sample_fps) <= 0 or a.max_seconds < 0
-            or a.max_frames < 1 or a.max_side < 32 or a.limit < 0 or a.max_new_tokens < 1):
+            or a.max_frames < 0 or a.max_side < 32 or a.limit < 0 or a.max_new_tokens < 0):
         p.error('Invalid sampling parameters')
     samples = load_samples(a.data_root, a.video_ids, a.limit, a.start_video_id)
     for s in samples:
@@ -143,6 +178,8 @@ def main():
     config.update(protocol='per_recipe_step', reference='arXiv:2606.09547v2',
                   prompt_version='arxiv_2606.09547v2_appendix_D_verbatim',
                   paper_prompt_verbatim=True,
+                  input_image_policy='square_resize', output_length_policy='eos_only' if not a.max_new_tokens else 'token_cap',
+                  context_frame_limit=a.max_frames or None,
                   success_message_policy='fixed_confirmation_reason_logged_only',
                   response_format='YES_NO', enable_thinking=template_kwargs.get('enable_thinking'),
                   chat_template_kwargs=template_kwargs, paper_interval_seconds=5,
@@ -164,6 +201,7 @@ def main():
         generation = copy.deepcopy(model.generation_config)
         generation.do_sample = False
         generation.temperature = generation.top_p = generation.top_k = None
+        configure_generation(generation, a.max_new_tokens)
 
     results = []
     for sample in samples:
@@ -195,15 +233,7 @@ def main():
                     # Stop at the next annotated instruction, not the hidden success label.
                     while start + turn * a.interval < end:
                         requested = start + turn * a.interval
-                        current = min(count - 1, math.floor(requested * fps))
-                        first = math.ceil(start * fps)
-                        stride = max(1, round(fps / a.sample_fps))
-                        indices = list(range(first, current + 1, stride))
-                        if not indices or indices[-1] != current:
-                            indices.append(current)
-                        if len(indices) > a.max_frames:
-                            indices = [indices[round(i * (len(indices)-1) / (a.max_frames-1))]
-                                       for i in range(a.max_frames)] if a.max_frames > 1 else [current]
+                        indices = observed_frame_indices(start, requested, fps, count, a.sample_fps, a.max_frames)
                         content, timestamps, logged_content = [], [], []
                         for index in indices:
                             cap.set(cv2.CAP_PROP_POS_FRAMES, index)
@@ -211,7 +241,7 @@ def main():
                             if not ok:
                                 raise RuntimeError(f'Cannot decode {video_id}, frame {index}')
                             image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                            image.thumbnail((a.max_side, a.max_side))
+                            image = image.resize((a.max_side, a.max_side))
                             frame_path = frame_dir / f'{index:09d}.png'
                             if a.overwrite or not frame_path.exists():
                                 image.save(frame_path)
@@ -245,13 +275,13 @@ def main():
                                 with torch.inference_mode():
                                     ids = model.generate(**inputs, generation_config=generation,
                                                          do_sample=False, num_beams=1,
-                                                         max_new_tokens=a.max_new_tokens)
+                                                         **generation_limits(a.max_new_tokens))
                                 output_ids = ids[:, inputs.input_ids.shape[1]:]
                                 generated_tokens = output_ids.shape[1]
                                 eos_ids = generation.eos_token_id
                                 eos_ids = ([eos_ids] if isinstance(eos_ids, int) else eos_ids) or []
                                 ended_with_eos = bool(generated_tokens and output_ids[0, -1].item() in eos_ids)
-                                hit_token_limit = generated_tokens >= a.max_new_tokens and not ended_with_eos
+                                hit_token_limit = bool(a.max_new_tokens and generated_tokens >= a.max_new_tokens and not ended_with_eos)
                                 raw = processor.batch_decode(output_ids, skip_special_tokens=True)[0]
                                 try:
                                     parsed = check_response(raw, field)

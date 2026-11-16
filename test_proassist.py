@@ -47,7 +47,7 @@ class ProAssistTests(unittest.TestCase):
         result, logs, backend = self.run_sample(replies=replies)
         self.assertEqual(result['pred_timestamps'], [0, .5, 1, 1, 2])
         self.assertEqual(result['pred_texts'][3], 'Instruct: SECOND')
-        self.assertEqual(backend.messages, [('reset', 'FIRST'), ('next', 'SECOND')])
+        self.assertEqual(backend.messages, [('reset', 'FIRST'), ('reset', 'SECOND')])
         self.assertEqual(len(logs), 5)
         self.assertEqual(result, self.run_sample(replies=replies, times=[90, 100, 200])[0])
         self.assertNotIn('SECRET', json.dumps(logs))
@@ -107,7 +107,7 @@ class ProAssistTests(unittest.TestCase):
             add_last_assistant_message=add_last,
             cleanup_text=lambda raw: ('Feedback: Fix it.', 'assistant'))
         def manage(frame, past, last):
-            self.assertEqual(frame.model_inputs['images'].shape, (1, 3, 8, 8))
+            self.assertEqual(frame.model_inputs['images'].shape, (1, 3, 224, 224))
             # Simulate upstream summary overwriting the shared generation buffer.
             buffer.fill_(99)
             return 'managed-cache', last

@@ -31,7 +31,7 @@ class FakeInputs(dict):
 
 
 class FullRecipeTests(unittest.TestCase):
-    def run_recipe(self, replies, times=None, dry_run=False):
+    def run_recipe(self, replies, times=None, dry_run=False, interval=0.5):
         import cv2
         import numpy as np
         with tempfile.TemporaryDirectory() as tmp:
@@ -60,7 +60,7 @@ class FullRecipeTests(unittest.TestCase):
                 AutoProcessor=SimpleNamespace(from_pretrained=lambda *args, **kwargs: processor),
                 AutoModelForImageTextToText=SimpleNamespace(from_pretrained=lambda *args, **kwargs: model))
             torch = SimpleNamespace(__version__='fake', inference_mode=contextlib.nullcontext)
-            args = ['run_full_recipe.py', '--data-root', str(root), '--output-dir', str(root/'out')]
+            args = ['run_full_recipe.py', '--data-root', str(root), '--output-dir', str(root/'out'), '--interval', str(interval)]
             if dry_run:
                 args.append('--dry-run')
             with patch.object(sys, 'argv', args), patch.dict(sys.modules, transformers=transformers, torch=torch), \
@@ -76,18 +76,18 @@ class FullRecipeTests(unittest.TestCase):
     def test_model_completion_drives_continuous_transitions(self):
         result, logs, inputs = self.run_recipe(['YES. Done first.', 'NO',
                                                'YES. Fix it.', 'YES. Done second.'])
-        self.assertEqual(result['pred_timestamps'], [0, 5, 5, 10, 15])
+        self.assertEqual(result['pred_timestamps'], [0, .5, .5, 1, 1.5])
         self.assertEqual(result['pred_texts'][2], 'Instruct: SECOND')
         self.assertEqual([(x['timestamp'], x['step_id'], x['stage']) for x in logs],
-                         [(5, 0, 'completion'), (10, 1, 'completion'),
-                          (10, 1, 'mistake'), (15, 1, 'completion')])
-        self.assertEqual(logs[1]['frame_timestamps'][0], 0)
+                         [(.5, 0, 'completion'), (1, 1, 'completion'),
+                          (1, 1, 'mistake'), (1.5, 1, 'completion')])
+        self.assertEqual(logs[1]['frame_timestamps'][0], 1)
         self.assertNotIn('SECRET', inputs)
         self.assertEqual(result, self.run_recipe(
             ['YES. Done first.', 'NO', 'YES. Fix it.', 'YES. Done second.'], [0, 1, 2])[0])
 
     def test_stalled_and_malformed_completion_never_force_advance(self):
-        result, logs, _ = self.run_recipe(['invalid', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO'])
+        result, logs, _ = self.run_recipe(['invalid', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO'], interval=5)
         self.assertEqual(result['pred_texts'], ['Instruct: FIRST'])
         self.assertTrue(all(row['step_id'] == 0 for row in logs))
         self.assertEqual([row['stage'] for row in logs[:2]], ['completion', 'completion'])
