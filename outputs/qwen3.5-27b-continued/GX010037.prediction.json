@@ -1,0 +1,17 @@
+{
+  "video_id": "GX010037",
+  "pred_texts": [
+    "Instruct: Take a bowl and put 3 teaspoons of sesame oil in it.",
+    "Success: Step complete.",
+    "Instruct: Now, pour in 4 teaspoons of soya sauce.",
+    "Feedback: You are using a tablespoon to measure the soy sauce, but the recipe requires 4 teaspoons. This will result in adding too much soy sauce.",
+    "Feedback: You are using a tablespoon to measure the soy sauce, but the recipe requires 4 teaspoons. This will result in adding too much soy sauce."
+  ],
+  "pred_timestamps": [
+    0.0,
+    30,
+    30,
+    35,
+    40
+  ]
+}

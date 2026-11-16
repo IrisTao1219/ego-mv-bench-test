@@ -65,12 +65,12 @@ python run_inference.py --data-root ../datasets/ego-mc-bench \
 CUDA_VISIBLE_DEVICES=1 python run_inference.py \
   --data-root ../datasets/ego-mc-bench \
   --model-path ../datasets/Hf_model/Qwen3-VL-30B-Instruct \
-  --device-map cuda:0 --output-dir outputs/qwen3-vl-30b --limit 0
+  --device-map cuda:0 --output-dir outputs/qwen3-vl-30b --limit
 
 CUDA_VISIBLE_DEVICES=1 python run_inference.py \
   --data-root ../datasets/ego-mc-bench \
   --model-path ../datasets/Hf_model/Qwen3.5-27B \
-  --device-map cuda:0 --output-dir outputs/qwen3.5-27b --limit 0 --thinking on
+  --device-map cuda:0 --output-dir outputs/qwen3.5-27b --limit
 ```
 
 全量将 --limit 设为 0，并使用新的输出目录。显存不足可降低 --max-frames，但这改变实验配置，需重新记录。max-seconds 截断运行只做排错，不用于正式计分。
@@ -82,11 +82,11 @@ CUDA_VISIBLE_DEVICES=1 python run_inference.py \
 使用 `--start-video-id` 从指定视频开头重新运行，包含该视频，并按 `annotations.json` 中的顺序继续。添加 `--limit 0` 跑完剩余所有视频；不能与 `--video-ids` 同时使用。模型、采样、思考模式等参数应与原实验一致。
 
 ```bash
-CUDA_VISIBLE_DEVICES=1 python run_inference.py \
+CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
   --data-root ../datasets/ego-mc-bench \
-  --model-path /home/Data/Hf_model/Qwen3.5-9B \
-  --device-map cuda:0 --output-dir outputs/qwen3.5-9b-continued \
-  --start-video-id GX010021 --limit 0
+  --model-path ../datasets/Hf_model/Qwen3.5-27B \
+  --device-map cuda:0 --output-dir outputs/qwen3.5-27b-continued \
+  --start-video-id GX010037 --limit 0
 ```
 
 请使用新的输出目录保留旧结果。新目录的 `predictions.json` 只包含本次视频；正式评测前需与旧目录中已完成且位于起始视频之前的结果合并，相同视频采用本次完整重跑结果。不要用同一输出目录加 `--overwrite` 来保留总预测：它会重写 `predictions.json`。
@@ -189,10 +189,10 @@ python run_full_recipe.py --data-root ../datasets/ego-mc-bench \
   --output-dir outputs/full-recipe-decode-test --max-seconds 60 --dry-run
 
 # 全量实验：使用独立输出目录，默认关闭思考，可按需使用 --thinking on。
-CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
+CUDA_VISIBLE_DEVICES=2 python run_full_recipe.py \
   --data-root ../datasets/ego-mc-bench \
-  --model-path /home/Data/Hf_model/Qwen3.5-9B \
-  --device-map cuda:0 --output-dir outputs/qwen3.5-9b-full-recipe --limit 0
+  --model-path ../datasets/Hf_model/Qwen3-VL-30B-Instruct \
+  --device-map cuda:0 --output-dir outputs/qwen3-vl-30b-full-recipe --limit 0
 
 CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
