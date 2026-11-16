@@ -31,7 +31,7 @@ class FakeInputs(dict):
 
 
 class FullRecipeTests(unittest.TestCase):
-    def run_recipe(self, replies, times=None, dry_run=False, interval=0.5):
+    def run_recipe(self, replies, times=None, dry_run=False, interval=0.5, frame_count=21):
         import cv2
         import numpy as np
         with tempfile.TemporaryDirectory() as tmp:
@@ -44,7 +44,7 @@ class FullRecipeTests(unittest.TestCase):
                       'text_timestamps': times or [99, 199, 299]}
             (root / 'annotations/annotations.json').write_text(json.dumps([sample]))
             cap = SimpleNamespace(
-                get=lambda prop: 1 if prop == cv2.CAP_PROP_FPS else 21,
+                get=lambda prop: 1 if prop == cv2.CAP_PROP_FPS else frame_count,
                 isOpened=lambda: True, set=lambda *args: None,
                 read=lambda: (True, np.zeros((32, 32, 3), dtype=np.uint8)),
                 release=lambda: None)
@@ -85,6 +85,18 @@ class FullRecipeTests(unittest.TestCase):
         self.assertNotIn('SECRET', inputs)
         self.assertEqual(result, self.run_recipe(
             ['YES. Done first.', 'NO', 'YES. Fix it.', 'YES. Done second.'], [0, 1, 2])[0])
+
+    def test_feedback_survives_sixty_seconds_and_resets_on_transition(self):
+        _, _, inputs = self.run_recipe(
+            ['NO', 'YES. Add more salt.', 'YES. First done.', 'YES. Second done.'],
+            interval=65, frame_count=211)
+        rows = [json.loads(line) for line in inputs.splitlines()]
+        later = next(row for row in rows if row['timestamp'] == 130)
+        self.assertEqual(later['messages'][1],
+                         {'role': 'assistant', 'content': 'Feedback: Add more salt.'})
+        next_step = next(row for row in rows if row['timestamp'] == 195)
+        self.assertEqual(len(next_step['messages']), 1)
+        self.assertNotIn('Add more salt.', json.dumps(next_step))
 
     def test_stalled_and_malformed_completion_never_force_advance(self):
         result, logs, _ = self.run_recipe(['invalid', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO'], interval=5)

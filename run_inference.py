@@ -88,6 +88,22 @@ def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed'):
 
 
 
+def inference_messages(instruction, content, prompt, history):
+    """Expose all emitted feedback this step to both decision stages.
+
+    Keep the existing task prompts. Assistant history also works for the simple
+    mistake prompt, which has no previous-feedback placeholder.
+    """
+    messages = []
+    if history:
+        messages = [
+            {'role': 'user', 'content': 'Current instruction: ' + instruction},
+            {'role': 'assistant', 'content': '\n'.join(
+                'Feedback: ' + entry['feedback'] for entry in history)},
+        ]
+    return messages + [{'role': 'user', 'content': content + [{'type': 'text', 'text': prompt}]}]
+
+
 def prediction_event(parsed, field):
     """Serialize decisions without presenting completion evidence as user speech.
 
@@ -175,7 +191,8 @@ def main():
     from PIL import Image
     a.output_dir.mkdir(parents=True, exist_ok=a.overwrite)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
-    config.update(protocol='per_recipe_step', reference='arXiv:2606.09547v2',
+    config.update(feedback_history_policy='complete_current_step_emitted_feedback',
+                  protocol='per_recipe_step', reference='arXiv:2606.09547v2',
                   prompt_version='arxiv_2606.09547v2_appendix_D_verbatim',
                   paper_prompt_verbatim=True,
                   input_image_policy='square_resize', output_length_policy='eos_only' if not a.max_new_tokens else 'token_cap',
@@ -252,16 +269,14 @@ def main():
                             timestamps.append(index / fps)
                             content += [{'type': 'text', 'text': f'Frame {index/fps:.3f}s'},
                                         {'type': 'image', 'image': image}]
-                        recent = [r for r in recent if requested-r['time'] <= 60]
-                        event = None
+                            event = None
                         for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
                             prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt)
-                            messages = [{'role': 'user', 'content': content + [{'type': 'text', 'text': prompt}]}]
+                            messages = inference_messages(step['instruction'], content, prompt, recent)
                             input_log.write(json.dumps({
                                 'video_id': video_id, 'step_id': step_id,
                                 'timestamp': requested, 'stage': stage,
-                                'messages': [{'role': 'user', 'content': logged_content + [
-                                    {'type': 'text', 'text': prompt}]}],
+                                'messages': inference_messages(step['instruction'], logged_content, prompt, recent),
                             }, ensure_ascii=False) + '\n')
                             input_log.flush()
                             raw, error, parsed = '', None, None

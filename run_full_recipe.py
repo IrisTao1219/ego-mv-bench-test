@@ -10,7 +10,7 @@ import math
 from pathlib import Path
 import time
 
-from run_inference import load_samples, save_json, prompt_for, check_response, prediction_event, configure_generation, generation_limits, observed_frame_indices
+from run_inference import load_samples, save_json, prompt_for, check_response, prediction_event, configure_generation, generation_limits, observed_frame_indices, inference_messages
 
 
 def instruction_texts(sample):
@@ -96,7 +96,7 @@ def main():
                   implementation='local_full_recipe_state_machine',
                   instruction_timestamps_used=False, video_start_seconds=0,
                   transition_policy='model_success_only', context_policy='observed_current_step_prefix',
-                  feedback_history_policy='last_60_seconds_across_steps',
+                  feedback_history_policy='complete_current_step_emitted_feedback',
                   dry_run_policy='no_model_no_transitions_no_predictions')
     save_json(a.output_dir / 'config.json', config)
     if not a.dry_run:
@@ -162,16 +162,14 @@ def main():
                         timestamps.append(index / fps)
                         content += [{'type': 'text', 'text': f'Frame {index/fps:.3f}s'},
                                     {'type': 'image', 'image': image}]
-                    recent = [r for r in recent if requested-r['time'] <= 60]
                     event = None
                     for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
                         prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt)
-                        messages = [{'role': 'user', 'content': content + [{'type': 'text', 'text': prompt}]}]
+                        messages = inference_messages(step['instruction'], content, prompt, recent)
                         input_log.write(json.dumps({
                             'video_id': video_id, 'step_id': step_id,
                             'timestamp': requested, 'stage': stage,
-                            'messages': [{'role': 'user', 'content': logged_content + [
-                                {'type': 'text', 'text': prompt}]}],
+                            'messages': inference_messages(step['instruction'], logged_content, prompt, recent),
                         }, ensure_ascii=False) + '\n')
                         input_log.flush()
                         raw, error, parsed = '', None, None
@@ -219,6 +217,7 @@ def main():
                     if event and event.startswith('Success:'):
                         state.complete()
                         step_start = requested
+                        recent = []
                         if not state.done:
                             result['pred_texts'].append('Instruct: ' + state.instruction)
                             result['pred_timestamps'].append(requested)
