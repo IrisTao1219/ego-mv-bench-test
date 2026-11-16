@@ -1,0 +1,17 @@
+{
+  "video_id": "GX010040",
+  "pred_texts": [
+    "Instruct: Get two slices of bread.",
+    "Success: Step complete.",
+    "Instruct: Put the bread slices in the toaster and toast until golden brown, usually for about 1 minute.",
+    "Success: Step complete.",
+    "Instruct: Now add 2 tablespoons of pizza sauce on each slice."
+  ],
+  "pred_timestamps": [
+    0.0,
+    20,
+    20,
+    85,
+    85
+  ]
+}
