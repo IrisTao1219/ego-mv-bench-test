@@ -48,7 +48,7 @@ python -m pip install -r requirements.txt
 
 这是遵循论文流程的基础模型基线，不是论文数值的严格复现。提示词已按本地 PDF 附录 D（第 15-17 页）原文对齐，保留原文笔误，仅归并排版换行。完成检测要求 `YES/NO`，`YES` 附完成理由；错误检测要求 `YES/NO`，`YES` 附纠正反馈，不追加自拟 JSON 契约或额外生成用户话术的提示要求。完成理由仅保留在日志中，预测的成功事件固定写为 `Success: Step complete.`；该固定话术是本地展示/序列化选择，论文未规定其映射。错误检测的 `YES` 后文本直接写入 `Feedback:`，不额外重写或语义过滤，以保留官方文本评测的原始输出。若模型仍生成第三人称分析，应作为模型未遵循提示词的输出保留。`paper_prompts.py` 保存原文模板，`PAPER_PROMPTS_2606.09547v2.md` 保存全部提示词与出处。默认 `--mistake-prompt detailed` 对应 Qwen3-VL/Qwen3.5/Gemini；`simple` 对应附录 D 的较早模型基线。帧上的时间标签是输入打包选择，不属于论文提示词原文。每步视频前缀按 1 FPS 候选帧取样，最多 32 帧均匀下采样，最长边 448；这些是本实现的可调预算，不是论文确认的配置。输入为带时间标记的多图，不是原生视频编码。未使用 Ego-CoMist+ 微调和 action head，不能对标论文表 3 的训练模型。
 
-每步终点采用下一条 Instruction 的起点，末步采用视频终点。该边界是本实现选择，未使用隐藏 Success 时刻提前截断。首个查询在步起点 +5 秒；长度不超过 5 秒的步骤可能没有查询。保存这些选择，比较实验时保持一致。没有实现 full-recipe 模式，不应把按时间自动切换指令称为 full-recipe 复现。
+每步终点采用下一条 Instruction 的起点，末步采用视频终点。该边界是本实现选择，未使用隐藏 Success 时刻提前截断。首个查询在步起点 +5 秒；长度不超过 5 秒的步骤可能没有查询。保存这些选择，比较实验时保持一致。上述 `run_inference.py` 仍仅运行 per-recipe-step；独立的 Full recipes 实验见下文，不应把按时间自动切换指令称为 full-recipe 复现。
 
 ## 运行
 
@@ -171,3 +171,36 @@ python -m unittest test_inference
 论文提示词和严格解析规则保持不变。开启思考可能先生成推理内容而非 YES/NO，或耗尽 `--max-new-tokens` 预算，因此可能出现解析失败；当前代码不会自动剥离思考内容。`config.json` 记录 `thinking`、`enable_thinking`（`default` 时为 null）、实际传入的 `chat_template_kwargs`、模型/processor 类型、Transformers 和 PyTorch 版本。每条推理日志增加 `generated_tokens` 和 `hit_token_limit`（达到生成上限且末尾不是 EOS），用于区分输出截断与格式错误。
 
 建议先使用新目录执行 `--max-seconds 30` 短跑，确认 `raw_response` 以 YES/NO 开头且 `parse_error` 为 null，再去掉时间限制完成整段视频。旧输出目录需要 `--overwrite`，会覆盖该次运行文件。Qwen3-VL-30B 的乱码原因尚未定位，关闭思考不能视为对其乱码的修复；先短跑检查并保留新增环境信息。
+
+
+## 独立 Full recipes 实验
+
+入口为 `run_full_recipe.py`，不修改 `run_inference.py` 的行为。复用原入口的样本加载、提示词替换、YES/NO 解析、事件序列化和 JSON 保存函数。模型加载与生成参数保持一致。
+
+视频从 0 秒开始，每 5 秒先判断当前步骤是否完成；有效 `YES` 记录 `Success:` 并在同一时刻注入下一条 `Instruct:`，下一次查询仍按统一的 5 秒时钟进行。`NO` 才检查错误。完成回复格式错误时保留当前步骤，并跳过该轮错误检测。不会在人工标注边界强制推进，也不设置强制步骤超时；直到所有步骤完成或视频结束。未完成步骤不会补造成功事件。
+
+推理仅提取按标注顺序排列的 Instruction 文本，不读取人工指令时间戳、Feedback 或 Success。模型只看到当前指令，不预先看到后续指令。第一条指令在 0 秒注入；后续指令在模型判断前一步完成时注入。这些注入时刻属于本地协议，并非人工真实起点。
+
+视觉上下文使用从视频 0 秒到当前时刻的已观察前缀，按原采样规则最多均匀取 32 帧，不随步骤切换重置；帧时间标签继续保留。最近 60 秒的模型反馈跨步骤保留。视频时钟连续不代表所有帧都送入模型，后期较稀疏的历史采样可能影响细粒度判断。这些上下文及切换细节是本地实现选择，论文未完整公开，不能声称是作者原始实现。
+
+```bash
+# 仅检查视频解码和输入构造，不加载模型；不会模拟完成或生成有效预测。
+python run_full_recipe.py --data-root ../datasets/ego-mc-bench \
+  --output-dir outputs/full-recipe-decode-test --max-seconds 60 --dry-run
+
+# 全量实验：使用独立输出目录，默认关闭思考，可按需使用 --thinking on。
+CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
+  --data-root ../datasets/ego-mc-bench \
+  --model-path /home/Data/Hf_model/Qwen3.5-9B \
+  --device-map cuda:0 --output-dir outputs/qwen3.5-9b-full-recipe --limit 0
+
+CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
+  --data-root ../datasets/ego-mc-bench \
+  --predictions outputs/qwen3.5-9b-full-recipe/predictions.json \
+  --report outputs/qwen3.5-9b-full-recipe/official-report.txt \
+  --require-full-coverage
+```
+
+输出格式与原实验一致：`config.json` 标记 `protocol=full_recipe` 和本地协议选择，`*.jsonl` 保存原始响应与当前 `step_id`，`*.model_inputs.jsonl` 和 `model_input_frames/` 保存模型输入，`predictions.json` 可交给现有官方评测入口。`--dry-run` 的空预测不可用于评测；`--max-seconds` 截断仅用于排错。输出目录默认必须不存在，不要复用已有实验目录；不要对已有实验目录使用 `--overwrite`。
+
+验证：`python -m unittest test_full_recipe test_inference test_evaluate_official`。新增测试用模拟视频和模型运行完整控制循环，检查模型驱动切换、连续时钟与上下文、标注时间戳不影响结果、滞留与格式错误行为，以及官方输出格式兼容性；不代表已运行真实 GPU 推理或复现论文数值。
