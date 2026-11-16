@@ -1,0 +1,37 @@
+{
+  "video_id": "GX010065",
+  "pred_texts": [
+    "Instruct: Grab two slices of bread and put them in the toaster until they are golden and crispy, about two minutes.",
+    "Success: Step complete.",
+    "Instruct: Now get a microwave safe mug or bowl for the egg.",
+    "Instruct: Now, crack one eggs into the mug.",
+    "Instruct: Now, add a pinch of salt to the egg in the mug.",
+    "Instruct: Now whisk the egg mixture until it is fully blended.",
+    "Instruct: Now put the egg in the microwave and cook for around 30 seconds.",
+    "Success: Step complete.",
+    "Instruct: You can take out the egg and cut it into two equal parts. Then put one part of the egg on each slice.",
+    "Feedback: You are spreading the egg mixture onto the bread instead of cutting the egg into two equal parts and placing one part on each slice as instructed.",
+    "Feedback: You are spreading the egg mixture onto the bread instead of cutting the egg into two equal parts and placing one part on each slice as instructed.",
+    "Feedback: You are spreading the egg mixture onto the bread instead of cutting the egg into two equal parts and placing one part on each slice as instructed.",
+    "Instruct: Now add one tablespoon of grated cheese on top of each slice.",
+    "Instruct: Now microwave the two toasts for 15 seconds so that the cheese is slightly melted.",
+    "Success: Step complete."
+  ],
+  "pred_timestamps": [
+    4.0,
+    34.0,
+    163.0,
+    172.0,
+    205.0,
+    237.0,
+    274.5,
+    294.5,
+    336.0,
+    356.0,
+    361.0,
+    366.0,
+    368.0,
+    416.0,
+    466.0
+  ]
+}

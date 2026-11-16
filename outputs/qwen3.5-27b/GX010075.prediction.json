@@ -1,0 +1,43 @@
+{
+  "video_id": "GX010075",
+  "pred_texts": [
+    "Instruct: Get a pack of instant noodles and put it in a microwave safe bowl.",
+    "Success: Step complete.",
+    "Instruct: Now let's boil some water in the kettle. Get about 250 ml of water.",
+    "Instruct: Now boil the water in the kettle.",
+    "Instruct: Now fill the microwave safe mug with the noodles halfway with water.",
+    "Instruct: Now while we wait for the noodles to soften, we will make the sauce. For the sauce, let's get a small bowl or mug. We can add one tablespoon of peanut butter.",
+    "Success: Step complete.",
+    "Instruct: Now let's add one tablespoon of soy sauce.",
+    "Instruct: Now let's add chili sauce to the mixture. You can add as much as you would like according to your taste.",
+    "Success: Step complete.",
+    "Instruct: Now before we finish the sauce, let's soften the noodles by trying to stirring the noodles in the hot water.",
+    "Instruct: Now let's add two tablespoons of noodle water to the sauce.",
+    "Instruct: Now let's mix the peanut butter and soya based sauce for the noodles together. Stir well with a fork.",
+    "Instruct: Let's make sure that the noodles are now soft. You can use a fork to check.",
+    "Instruct: Now drain the water completely from the noodles.",
+    "Instruct: Now let's add the peanut butter and soya sauce that we prepared into the noodles and mix it thoroughly.",
+    "Instruct: Now take a small slice of white onion, chop it finely into small pieces, and let's add it to the noodles. You can add as much onion as you want.",
+    "Instruct: Now mix the onion pieces and the noodles thoroughly."
+  ],
+  "pred_timestamps": [
+    3.0,
+    8.0,
+    12.0,
+    40.0,
+    249.0,
+    268.0,
+    303.0,
+    324.0,
+    364.0,
+    399.0,
+    400.0,
+    424.0,
+    463.0,
+    503.0,
+    517.0,
+    544.0,
+    591.0,
+    688.0
+  ]
+}

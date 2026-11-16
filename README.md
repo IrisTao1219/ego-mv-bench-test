@@ -95,8 +95,8 @@ CUDA_VISIBLE_DEVICES=1 python run_inference.py \
 python -m pip install -r requirements-eval.txt
 CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
-  --predictions outputs/qwen3.5-9b/predictions.json \
-  --report outputs/qwen3.5-9b/official-report.txt
+  --predictions outputs/qwen3-vl-30b/predictions.json \
+  --report outputs/qwen3-vl-30b/official-report.txt
 ```
 
 评分代码已合并在本仓库 `vendor/`，无需相邻的 `qualcomm_interactive_cooking_eval` 目录。`vendor/data.py`、`vendor/eval.py`、`vendor/utils.py` 和许可与源目录一致。

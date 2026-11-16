@@ -1,0 +1,27 @@
+{
+  "video_id": "GX010040",
+  "pred_texts": [
+    "Instruct: Get two slices of bread.",
+    "Instruct: Put the bread slices in the toaster and toast until golden brown, usually for about 1 minute.",
+    "Success: Step complete.",
+    "Instruct: Now add 2 tablespoons of pizza sauce on each slice.",
+    "Instruct: Now spread the sauce evenly on the toasts.",
+    "Instruct: Now add shredded mozzarella on top of each of the slices to cover them evenly.",
+    "Success: Step complete.",
+    "Instruct: Now you can add olives on top of each bread slice according to your taste.",
+    "Instruct: Take a microwave safe plate or bowl, put the bread slices in it and microwave the slices for 40 to 45 seconds.",
+    "Success: Step complete."
+  ],
+  "pred_timestamps": [
+    3.38,
+    14.568,
+    84.568,
+    85.31,
+    122.44,
+    165.47,
+    200.47,
+    204.25,
+    240.0,
+    280.0
+  ]
+}
