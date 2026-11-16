@@ -41,6 +41,31 @@ def parse_event(text):
     return match[1] + ': ' + match[2].strip()
 
 
+def generate_until_eos(model, embeds, past, threshold):
+    """Greedy streaming decode with dynamic storage and upstream silence semantics.
+
+    The silence decision applies only to the first token of a frame. Subsequent
+    tokens run until EOS, retaining KV entries exactly as the bounded backend does.
+    """
+    import torch
+    tokens = []
+    while True:
+        out = model.forward(inputs_embeds=embeds, past_key_values=past,
+                            use_cache=True, return_dict=True)
+        past = out.past_key_values
+        scores = out.logits[:, -1:, :].clone()
+        if not tokens:
+            probability = out.w2t_probs[0, -1]
+            model.last_not_talk_prob = probability
+            scores[..., model.config.w2t_target_id] = (1e4 if probability > threshold else -1e4)
+        token = scores.argmax(dim=-1)
+        first = not tokens
+        tokens.append(token)
+        if token.item() == model.config.eos_token_id or (first and token.item() == model.config.w2t_target_id):
+            return torch.cat(tokens, dim=1), past
+        embeds = model.get_input_embeddings()(token)
+
+
 class ProAssistBackend:
     """Reuse upstream formatting, greedy streaming generation and cache management."""
     def __init__(self, args):
@@ -79,10 +104,13 @@ class ProAssistBackend:
         self.model.eval()
         self.runner = StreamInferenceRunner.build(
             model=self.model, tokenizer=self.tokenizer, fps=args.sample_fps,
-            eval_max_seq_len=args.context_length,
+            eval_max_seq_len=args.context_length or sys.maxsize,
             reserved_seq_len=args.max_new_tokens + 32,
             not_talk_threshold=args.not_talk_threshold, eval_name='ego_mc_bench')
-        self.metadata = dict(num_tokens_per_img=self.model.config.num_tokens_per_img,
+        self.metadata = dict(input_image_policy='square_resize_then_model_vision_processor',
+                             context_policy='complete_step_cache' if not args.context_length else 'upstream_summarize_and_drop',
+                             output_length_policy='eos_only' if not args.max_new_tokens else 'token_cap',
+                             num_tokens_per_img=self.model.config.num_tokens_per_img,
                              use_binary_decision_head=self.model.config.use_binary_decision_head,
                              torch_version=torch.__version__)
 
@@ -102,6 +130,10 @@ class ProAssistBackend:
 
     def step(self, rgb, timestamp):
         torch = self.torch
+        from PIL import Image
+        import numpy as np
+        size = getattr(self.args, 'max_side', 224)
+        rgb = np.asarray(Image.fromarray(rgb).resize((size, size)))
         messages = self.pending
         ids, input_str = self.runner.processor.get_input_sequence(1, messages, self.first)
         self.first, self.pending = False, []
@@ -113,10 +145,14 @@ class ProAssistBackend:
                   else v.to(self.model.device) for k, v in inputs.items()}
         with torch.inference_mode():
             embeds = self.model.joint_embed(**inputs)
-            output, self.past = self.model.fast_greedy_generate(
-                embeds, self.past, max_length=self.args.max_new_tokens,
-                not_talk_threshold=self.args.not_talk_threshold,
-                drop_generated_kv_cache=False)
+            if self.args.max_new_tokens:
+                output, self.past = self.model.fast_greedy_generate(
+                    embeds, self.past, max_length=self.args.max_new_tokens,
+                    not_talk_threshold=self.args.not_talk_threshold,
+                    drop_generated_kv_cache=False)
+            else:
+                output, self.past = generate_until_eos(
+                    self.model, embeds, self.past, self.args.not_talk_threshold)
             output = output.clone()  # Summary generation reuses the upstream output buffer.
             raw = self.tokenizer.decode(output[0])
             cleaned, role = self.runner.processor.cleanup_text(raw)
@@ -124,10 +160,11 @@ class ProAssistBackend:
                          if self.tokenizer.img_sep_token_id is not None else None)
             # Upstream summary management needs only these two frame attributes.
             frame = SimpleNamespace(model_inputs=inputs, num_frames=1)
-            self.past, self.last = self.runner.manage_kv_cache(frame, self.past, self.last)
+            if self.args.context_length:
+                self.past, self.last = self.runner.manage_kv_cache(frame, self.past, self.last)
         return dict(raw_response=raw, text=cleaned, role=role,
                     generated_tokens=output.shape[1],
-                    hit_token_limit=(output.shape[1] >= self.args.max_new_tokens
+                    hit_token_limit=bool(self.args.max_new_tokens and output.shape[1] >= self.args.max_new_tokens
                                      and output[0, -1].item() != self.model.config.eos_token_id),
                     input_str=input_str, input_messages=messages)
 
@@ -215,7 +252,7 @@ def run_video(sample, args, backend, cap, log):
                 backend.reset(steps[step_id]['instruction'])
             else:
                 append('Instruct: ' + steps[step_id]['instruction'], timestamp)
-                backend.set_instruction(steps[step_id]['instruction'])
+                backend.reset(steps[step_id]['instruction'])
     return result
 
 
@@ -230,8 +267,9 @@ def main():
     p.add_argument('--protocol', choices=('per_recipe_step', 'full_recipe'), default='per_recipe_step')
     p.add_argument('--sample-fps', type=float, default=2)
     p.add_argument('--not-talk-threshold', type=float, default=0.3)
-    p.add_argument('--context-length', type=int, default=4096)
-    p.add_argument('--max-new-tokens', type=int, default=100)
+    p.add_argument('--context-length', type=int, default=0, help='0 = complete step cache; positive = summarize/drop budget')
+    p.add_argument('--max-new-tokens', type=int, default=0, help='0 = EOS-only generation')
+    p.add_argument('--max-side', type=int, default=224, help='Square RGB size before model vision processing')
     p.add_argument('--device-index', type=int, default=0)
     p.add_argument('--attn-implementation', choices=('sdpa', 'eager', 'flash_attention_2'), default='sdpa')
     p.add_argument('--video-ids', nargs='+')
@@ -243,7 +281,8 @@ def main():
     if (not all(math.isfinite(x) for x in (args.sample_fps, args.max_seconds, args.not_talk_threshold))
             or args.sample_fps <= 0 or args.max_seconds < 0
             or not 0 < args.not_talk_threshold < 1 or args.limit < 0 or args.device_index < 0
-            or args.context_length < args.max_new_tokens + 256 or args.max_new_tokens < 1):
+            or args.context_length < 0 or args.max_new_tokens < 0 or args.max_side < 32
+            or (args.context_length and args.context_length < args.max_new_tokens + 256)):
         p.error('Invalid inference parameters')
     if not args.dry_run:
         for key in ('model_path', 'base_model_path', 'vision_model_path'):
@@ -255,7 +294,7 @@ def main():
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}
     config.update(implementation='local_proassist_adapter', paper_exact_reproduction=False,
                   response_mapping='strict_tagged_speech_no_helper_llm', system_prompt=SYSTEM_PROMPT,
-                  context_handling='upstream_summarize_and_drop', offline=True,
+                  context_handling='complete_step_cache' if not args.context_length else 'upstream_summarize_and_drop', offline=True,
                   reference='https://github.com/pro-assist/ProAssist',
                   instruction_timestamps_used=args.protocol == 'per_recipe_step',
                   feedback_and_success_labels_used=False)

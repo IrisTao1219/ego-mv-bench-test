@@ -1,5 +1,5 @@
 import unittest
-from run_inference import recipe_steps, check_response, prompt_for, prediction_event
+from run_inference import recipe_steps, check_response, prompt_for, prediction_event, inference_messages
 from paper_prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
 
 
@@ -13,6 +13,17 @@ class InferenceTests(unittest.TestCase):
                                  {'instruction': 'Crack eggs', 'start': 36.}])
         for stage in ('completion', 'mistake'):
             self.assertNotIn('SECRET', prompt_for(stage, steps[0]['instruction'], 22, []))
+
+    def test_entire_step_history_visible_to_both_stages_and_simple_prompt(self):
+        history = [{'time': 1, 'feedback': 'Add salt.'},
+                   {'time': 90, 'feedback': 'Lower heat.'}]
+        for stage in ('completion', 'mistake'):
+            prompt = prompt_for(stage, 'Cook', 200, history, 'simple')
+            messages = inference_messages('Cook', [], prompt, history)
+            self.assertEqual(messages[1], {'role': 'assistant',
+                'content': 'Feedback: Add salt.\nFeedback: Lower heat.'})
+            self.assertEqual(messages[-1]['content'][-1]['text'], prompt)
+        self.assertEqual(len(inference_messages('Next', [], 'Prompt', [])), 1)
 
     def test_paper_responses(self):
         for field in ('completed', 'mistake'):
