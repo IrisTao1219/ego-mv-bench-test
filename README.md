@@ -6,6 +6,15 @@ Python 3.10+，建议 Linux NVIDIA CUDA 服务器。模型默认路径：`/datas
 
 ## 安装
 
+服务器配置（用户于 2026-11-16 确认）：
+
+- GPU：NVIDIA A800 80GB PCIe。
+- PyTorch：`2.11.0+cu128`。
+- torchvision：`0.26.0+cu128`。
+- PyTorch CUDA runtime：`12.8`（不代表系统 CUDA Toolkit 或驱动版本）。
+
+后续实验环境以此为兼容性基准；ProAssist 与这套版本组合尚待真实推理验证。不要直接用 ProAssist 官方旧依赖清单覆盖已工作的环境。
+
 依赖固定使用 CUDA 12.8 版 PyTorch 2.11.0 和 torchvision 0.26.0，适用于本项目的 Linux NVIDIA 服务器环境。执行：
 
 ```bash
@@ -204,3 +213,64 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
 输出格式与原实验一致：`config.json` 标记 `protocol=full_recipe` 和本地协议选择，`*.jsonl` 保存原始响应与当前 `step_id`，`*.model_inputs.jsonl` 和 `model_input_frames/` 保存模型输入，`predictions.json` 可交给现有官方评测入口。`--dry-run` 的空预测不可用于评测；`--max-seconds` 截断仅用于排错。输出目录默认必须不存在，不要复用已有实验目录；不要对已有实验目录使用 `--overwrite`。
 
 验证：`python -m unittest test_full_recipe test_inference test_evaluate_official`。新增测试用模拟视频和模型运行完整控制循环，检查模型驱动切换、连续时钟与上下文、标注时间戳不影响结果、滞留与格式错误行为，以及官方输出格式兼容性；不代表已运行真实 GPU 推理或复现论文数值。
+
+## ProAssist 自主发言实验
+
+独立入口 `run_proassist.py` 复用 [ProAssist 官方代码](https://github.com/pro-assist/ProAssist) 的输入格式、`fast_greedy_generate` 发言/静默机制及 `summarize_and_drop` 上下文管理。每个采样帧只输入一次，不使用原 Qwen 入口的每 5 秒完成/错误双查询。默认 2 FPS、4096 上下文、静默阈值 0.3，参考官方演示 notebook；这些不是 Ego-MC-Bench 作者确认的 ProAssist 参数。I1/I5/I10 由所传权重的配置决定，无需改代码；实际每帧 token 数和是否使用 binary decision head 写入 `config.json`。
+
+请使用 **独立 Python 3.10 或 3.11 环境**。本项目提供 `requirements-proassist.txt` 推理候选依赖：保留用户已工作的 PyTorch 2.11.0+cu128 / torchvision 0.26.0+cu128，采用官方代码对应的 Transformers 4.43.1、PEFT 0.11.1；该新旧组合尚未在服务器上跑通真实模型，不是验证过的锁文件。不要安装本项目的 Qwen `requirements.txt`，也不要安装 ProAssist 官方整套旧版训练/演示依赖，后者会要求 torch 2.3.1，并包含锁定旧 torch 的 vLLM。
+
+```bash
+conda create -n proassist python=3.10 -y
+conda activate proassist
+# 在本项目根目录执行；先检查依赖解析，再安装。
+python -m pip install --dry-run -r requirements-proassist.txt
+python -m pip install -r requirements-proassist.txt
+python -m pip check
+```
+
+入口通过 `--proassist-root /path/to/ProAssist` 指定服务器已有的官方源码目录，无需执行官方的整套依赖安装。安装后先运行 `python run_proassist.py --help` 和下方 30 秒短跑；成功解析依赖并不代表模型运行兼容。推理候选清单暂不包括 DeepSpeed、vLLM、Gradio 等训练/服务组件；若所用官方源码版本的间接导入确实需要额外包，应按具体 traceback 处理，避免直接补装官方全部依赖。
+
+需要三个本地模型目录：ProAssist 适配器、Llama-3.1-8B-Instruct 基础模型、**与适配器 `config.json` 中 `vision_pretrained` 对应的视觉模型**（包含 processor）。之前只下载适配器和 Llama 的说明不完整，还需要准备视觉模型。可在服务器上查看对应名称：
+
+```bash
+python -c 'import json; print(json.load(open("/path/to/ProAssist-Model-L4096-I1/config.json"))["vision_pretrained"])'
+```
+
+入口默认强制 Hugging Face 离线加载。它通过临时符号链接及配置副本重定向基础模型、视觉模型路径，不修改下载好的权重或配置，不自动下载缺少的模型。默认使用 SDPA；若使用 Flash Attention，可传 `--attn-implementation flash_attention_2` 并自行准备相应依赖。
+
+```bash
+# 不加载模型，检查数据与逐帧解码；输出为空预测，不可用于评测。
+python run_proassist.py --data-root ../datasets/ego-mc-bench \
+  --output-dir outputs/proassist-decode-test --max-seconds 30 --dry-run
+
+# 首先短跑：将三个模型路径和源码路径替换成服务器实际路径。
+CUDA_VISIBLE_DEVICES=1 python run_proassist.py \
+  --data-root ../datasets/ego-mc-bench \
+  --proassist-root /path/to/ProAssist \
+  --model-path /path/to/ProAssist-Model-L4096-I1 \
+  --base-model-path /path/to/Llama-3.1-8B-Instruct \
+  --vision-model-path /path/to/vision-model \
+  --output-dir outputs/proassist-i1-smoke --max-seconds 30
+```
+
+检查 `*.jsonl` 中的 `raw_response`、`text`、`parse_error`、`hit_token_limit`；确认加载和格式正常后，使用**新的输出目录**，去掉 `--max-seconds 30` 并加 `--limit 0` 运行全部视频。`--device-index` 指 CUDA_VISIBLE_DEVICES 后的可见设备编号，默认 0。输出目录必须不存在，避免覆盖已有实验。
+
+- 默认 `--protocol per_recipe_step`：每步从人工 Instruction 时间重置视频上下文；完成后转下一步的人工 Instruction 起点。若始终未完成，在下一条人工 Instruction 边界重置，保留该步未完成结果。模型不读取参考 Feedback、Success 或用户对话。
+- `--protocol full_recipe`：从 0 秒连续播放，仅在模型输出有效 Success 时注入下一条指令，不读取人工时间戳；步骤切换保留上下文。指令只在开始或切换时注入，静默帧不追加用户查询。
+- 自由文本到评测事件的映射采用**本地前缀提示协议**：要求发言为单条 `Feedback: ...` 或 `Success: ...`；静默不产生事件，不符合格式的发言保留日志并标记解析错误，不猜测其语义，不强制推进。前缀提示可能影响原模型行为。成功确认保留模型原文，未调用额外裁判模型。
+- `config.json` 明确标记 `paper_exact_reproduction=false`。没有声称该提示词、参数、采样或步骤调度是论文表 3 的原始实现，也没有声称 I1 就是表 3 使用的版本。
+
+`predictions.json` 与现有官方评测入口兼容。全量推理结束后，可在原有**评测环境**执行：
+
+```bash
+python evaluate_official.py --data-root ../datasets/ego-mc-bench \
+  --predictions outputs/proassist-i1/predictions.json --check-only --require-full-coverage
+
+CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
+  --data-root ../datasets/ego-mc-bench \
+  --predictions outputs/proassist-i1/predictions.json \
+  --report outputs/proassist-i1/official-report.txt --require-full-coverage
+```
+
+本地验证：`python -m unittest test_proassist test_full_recipe test_inference test_evaluate_official`。测试覆盖实际控制循环的静默/纠错/成功、两种步骤协议、无参考反馈泄漏、格式错误、官方输出格式，以及模拟官方模型接口的路径重定向和 KV cache 传递。尚未在真实 ProAssist 权重/GPU 上运行推理；服务器短跑是必要的后续验证。
