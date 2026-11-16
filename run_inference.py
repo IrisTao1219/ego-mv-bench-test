@@ -163,12 +163,12 @@ def main():
     p.add_argument('--start-video-id', help='Start at this video (inclusive), in annotation order; use --limit 0 for all remaining videos')
     p.add_argument('--limit', type=int, default=1)
     p.add_argument('--max-seconds', type=float, default=0, help='Absolute video cutoff, 0 = all')
-    p.add_argument('--interval', type=float, default=0.5, help='Frame-level query cadence; paper baseline used 5 seconds')
+    p.add_argument('--interval', type=float, default=5, help='Query cadence in seconds; paper turn-based baseline: 5 seconds')
     p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed',
                    help='Appendix D: detailed for Qwen3-VL/Qwen3.5/Gemini; simple for older baselines')
     p.add_argument('--sample-fps', type=float, default=2)
     p.add_argument('--max-frames', type=int, default=0, help='0 = complete observed step prefix; positive = uniform frame cap')
-    p.add_argument('--max-side', type=int, default=224, help='Square input image size')
+    p.add_argument('--max-side', type=int, default=448, help='Maximum image side; preserve aspect ratio without upscaling')
     p.add_argument('--max-new-tokens', type=int, default=0, help='0 = EOS-only generation; positive = token cap')
     p.add_argument('--thinking', choices=('default', 'on', 'off'), default='off',
                    help='Chat-template thinking mode: default = omit the switch; on/off = explicit '
@@ -195,7 +195,7 @@ def main():
                   protocol='per_recipe_step', reference='arXiv:2606.09547v2',
                   prompt_version='arxiv_2606.09547v2_appendix_D_verbatim',
                   paper_prompt_verbatim=True,
-                  input_image_policy='square_resize', output_length_policy='eos_only' if not a.max_new_tokens else 'token_cap',
+                  input_image_policy='aspect_ratio_thumbnail', output_length_policy='eos_only' if not a.max_new_tokens else 'token_cap',
                   context_frame_limit=a.max_frames or None,
                   success_message_policy='fixed_confirmation_reason_logged_only',
                   response_format='YES_NO', enable_thinking=template_kwargs.get('enable_thinking'),
@@ -258,7 +258,7 @@ def main():
                             if not ok:
                                 raise RuntimeError(f'Cannot decode {video_id}, frame {index}')
                             image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                            image = image.resize((a.max_side, a.max_side))
+                            image.thumbnail((a.max_side, a.max_side))
                             frame_path = frame_dir / f'{index:09d}.png'
                             if a.overwrite or not frame_path.exists():
                                 image.save(frame_path)
