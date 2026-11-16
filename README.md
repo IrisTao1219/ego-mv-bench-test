@@ -247,11 +247,11 @@ python run_proassist.py --data-root ../datasets/ego-mc-bench \
 # 首先短跑：将三个模型路径和源码路径替换成服务器实际路径。
 CUDA_VISIBLE_DEVICES=1 python run_proassist.py \
   --data-root ../datasets/ego-mc-bench \
-  --proassist-root /path/to/ProAssist \
-  --model-path /path/to/ProAssist-Model-L4096-I1 \
-  --base-model-path /path/to/Llama-3.1-8B-Instruct \
-  --vision-model-path /path/to/vision-model \
-  --output-dir outputs/proassist-i1-smoke --max-seconds 30
+  --proassist-root ../ProAssist \
+  --model-path ../models/ProAssist-Model-L4096-I5 \
+  --base-model-path ../models/Llama-3.1-8B-Instruct \
+  --vision-model-path ../models/siglip-so400m-patch14-384 \
+  --output-dir outputs/proassist-i5-smoke --max-seconds 30
 ```
 
 检查 `*.jsonl` 中的 `raw_response`、`text`、`parse_error`、`hit_token_limit`；确认加载和格式正常后，使用**新的输出目录**，去掉 `--max-seconds 30` 并加 `--limit 0` 运行全部视频。`--device-index` 指 CUDA_VISIBLE_DEVICES 后的可见设备编号，默认 0。输出目录必须不存在，避免覆盖已有实验。
