@@ -1,6 +1,9 @@
 """Text-only instruction-following probe; run explicitly on a model server."""
 import argparse
 import json
+from difflib import SequenceMatcher
+
+from run_inference import prompt_for, check_response
 
 
 RULE = """You are checking cooking mistakes.
@@ -44,10 +47,80 @@ def cases():
     ]
 
 
+def compare_feedback(first, second):
+    """Text similarity is diagnostic only, not a semantic equivalence verdict."""
+    normalize = lambda text: ' '.join(text.casefold().split())
+    return dict(
+        exact_same_text=first == second,
+        same_ignoring_case_whitespace=normalize(first) == normalize(second),
+        text_similarity=round(SequenceMatcher(None, normalize(first), normalize(second)).ratio(), 3),
+    )
+
+
+def repeat_probe(generate):
+    scenarios = [
+        ('盐量不足', 'Add two teaspoons of salt to the bowl.',
+         'The person added one teaspoon of salt to the bowl, put the spoon away, '
+         'and stopped adding salt.'),
+        ('油量不足', 'Put three teaspoons of sesame oil in the bowl.',
+         'The person added two teaspoons of sesame oil to the bowl, put the '
+         'spoon away, and stopped adding oil.'),
+        ('温度错误', 'Set the oven to 180 degrees Celsius.',
+         'The person set the oven to 220 degrees Celsius, confirmed the setting, '
+         'and walked away.'),
+    ]
+    results = []
+    for name, instruction, observation in scenarios:
+        # Each request is independent, just like the project's turn-based calls.
+        # The detailed paper prompt is unchanged; only textual observation is
+        # substituted for images in this text-only diagnostic.
+        def request(label, current_observation, history):
+            prompt = prompt_for('mistake', instruction, 0, history)
+            return generate(label, prompt + '\n\nCurrent observation: ' + current_observation)
+
+        first_raw = request(name + ' / 首轮', observation, [])
+        try:
+            first = check_response(first_raw, 'mistake')
+        except ValueError as exc:
+            results.append(dict(case=name, status='invalid_first_response',
+                                first_raw=first_raw, parse_error=str(exc)))
+            continue
+        if not first['mistake']:
+            results.append(dict(case=name, status='no_first_feedback', first_raw=first_raw))
+            continue
+        history = [{'time': 0, 'feedback': first['feedback']}]
+        variants = [
+            ('完全相同观察', observation),
+            ('几乎相同观察', observation + ' No additional action occurred; the state is unchanged.'),
+        ]
+        # Both variants use only the first response as history, so the inputs
+        # differ solely in the small observation suffix.
+        for variant, current in variants:
+            raw = request(name + ' / ' + variant, current, history)
+            result = dict(case=name, variant=variant, first_raw=first_raw,
+                          history_feedback=first['feedback'], second_raw=raw,
+                          expected_decision='NO')
+            try:
+                second = check_response(raw, 'mistake')
+                result.update(status='ok', repeated_trigger=second['mistake'],
+                              second_feedback=second['feedback'])
+                if second['mistake']:
+                    result.update(compare_feedback(first['feedback'], second['feedback']))
+            except ValueError as exc:
+                result.update(status='invalid_second_response', parse_error=str(exc))
+            results.append(result)
+            print(json.dumps(result, ensure_ascii=False), flush=True)
+    print('\n--- REPEAT SUMMARY ---')
+    print(json.dumps(results, ensure_ascii=False, indent=2))
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model-path', required=True)
     parser.add_argument('--device-map', default='cuda:0')
+    parser.add_argument('--mode', choices=('decision', 'repeat'), default='decision',
+                        help='decision: original YES/NO tests; repeat: generate and compare actual feedback')
     args = parser.parse_args()
 
     import torch
@@ -59,10 +132,7 @@ def main():
         attn_implementation='sdpa', local_files_only=True,
     ).eval()
 
-    results = []
-    for name, feedback, observation, expected in cases():
-        prompt = (RULE + '\nPrevious feedback: ' + json.dumps(feedback)
-                  + '\nCurrent observation: ' + observation)
+    def generate(name, prompt):
         messages = [{'role': 'user', 'content': [{'type': 'text', 'text': prompt}]}]
         rendered = processor.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True, enable_thinking=False,
@@ -73,10 +143,22 @@ def main():
             return_dict=True, return_tensors='pt', enable_thinking=False,
         ).to(model.device)
         with torch.inference_mode():
-            output = model.generate(**inputs, max_new_tokens=64, do_sample=False)
+            output = model.generate(**inputs, max_new_tokens=256, do_sample=False)
         raw = processor.batch_decode(
             output[:, inputs.input_ids.shape[1]:], skip_special_tokens=True,
         )[0].strip()
+        print('RESPONSE: ' + raw, flush=True)
+        return raw
+
+    if args.mode == 'repeat':
+        repeat_probe(generate)
+        return
+
+    results = []
+    for name, feedback, observation, expected in cases():
+        prompt = (RULE + '\nPrevious feedback: ' + json.dumps(feedback)
+                  + '\nCurrent observation: ' + observation)
+        raw = generate(name, prompt)
         result = dict(case=name, expected=expected, actual=raw, passed=raw == expected)
         results.append(result)
         print(json.dumps(result, ensure_ascii=False), flush=True)
