@@ -166,8 +166,8 @@ def main():
     p.add_argument('--interval', type=float, default=5, help='Query cadence in seconds; paper turn-based baseline: 5 seconds')
     p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed',
                    help='Appendix D: detailed for Qwen3-VL/Qwen3.5/Gemini; simple for older baselines')
-    p.add_argument('--sample-fps', type=float, default=2)
-    p.add_argument('--max-frames', type=int, default=0, help='0 = complete observed step prefix; positive = uniform frame cap')
+    p.add_argument('--sample-fps', type=float, default=1)
+    p.add_argument('--max-frames', type=int, default=32, help='0 = complete observed step prefix; positive = uniform frame cap')
     p.add_argument('--max-side', type=int, default=448, help='Maximum image side; preserve aspect ratio without upscaling')
     p.add_argument('--max-new-tokens', type=int, default=0, help='0 = EOS-only generation; positive = token cap')
     p.add_argument('--thinking', choices=('default', 'on', 'off'), default='off',
