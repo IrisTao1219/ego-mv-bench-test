@@ -1,0 +1,262 @@
+--- 盐量不足 / 首轮: INPUT ---
+<|im_start|>user
+You are an expert cooking assistant who is observing a person cook. You should look out for mistakes made by the person.
+
+##INSTRUCTIONS: The person is trying to complete the following recipe step: Add two teaspoons of salt to the bowl.. Your task is to check if the person is aboutto make or has already made a mistake. Mistakes occur when the person performs actions that deviates from the instruction and DIRECTLY INTERFERES WITH SUCCESSFUL INSTRUCTION COMPLETION. Do not penalize actions that do not directly interfere with instruction completion (e.g. washing broccoli before cutting, if the instruction just says ‘cut broccoli’).
+
+Here are some common types of mistakes that you should look out for: 1. Technique Error: A mistake in how a step is physically performed. Examples include chopping with the wrong motion, stirring when folding is required, or spilling during transfer, producing uneven cuts or texture issues even when tools and amounts are right. Ignore minor technique errors such as not holding or gripping objects properly, holding with a risk of dropping etc. that do not interfere directly withrecipe completion. 2. Preparation Error: A setup mistake before executing the step . Using the wrong or dirty utensil, not washing/peeling/draining ingredients,insufficient draining of fluid, cutting/chopping without peeling which makes correct execution difficult or unsafe. 3. Measurement Error: An error in quantity —wrong counts, volumes, weights, or units. Mixing up teaspoons and tablespoons, misreading a scale, or miscounting items leads to off ratios and predictable taste or texture problems. 4. Temperature Error: A mistake in heat level or thermal state — the applied temperature, starting temperature, or thermal transition is wrong. Not preheating, using the wrong microwave power, overheating oil, or adding cold liquid when warm is required often causes burning, undercooking, or split emulsions. 5. Timing Error: A mistake in duration – over- or under-doing a step or skipping required rests, proofs, or cooling periods. Overcooking, underblending, or cutting resting time short typically yields incorrect doneness or unstable textures.
+
+Do not repeat previously detected mistakes. Here are the feedbacks corresponding to previously detected mistakes:[]. Assume the recipe step is still in progress. Your task is to identify any mistake that’s already visible in the partially completed step. Do no penalize partially competed recipe steps. If you observe a mistake answer ‘YES’, else ‘No’. Your response MUST BEGIN WITH ‘YES’ or ‘NO’. In case you answer ‘YES’, please follow with a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). Directly address the person.
+
+Current observation: The person added one teaspoon of salt to the bowl, put the spoon away, and stopped adding salt.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but muchslower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+RESPONSE: YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.
+
+--- 盐量不足 / 完全相同观察: INPUT ---
+<|im_start|>user
+You are an expert cooking assistant who is observing a person cook. You should look out for mistakes made by the person.
+
+##INSTRUCTIONS: The person is trying to complete the following recipe step: Add two teaspoons of salt to the bowl.. Your task is to check if the person is aboutto make or has already made a mistake. Mistakes occur when the person performs actions that deviates from the instruction and DIRECTLY INTERFERES WITH SUCCESSFUL INSTRUCTION COMPLETION. Do not penalize actions that do not directly interfere with instruction completion (e.g. washing broccoli before cutting, if the instruction just says ‘cut broccoli’).
+
+Here are some common types of mistakes that you should look out for: 1. Technique Error: A mistake in how a step is physically performed. Examples include chopping with the wrong motion, stirring when folding is required, or spilling during transfer, producing uneven cuts or texture issues even when tools and amounts are right. Ignore minor technique errors such as not holding or gripping objects properly, holding with a risk of dropping etc. that do not interfere directly withrecipe completion. 2. Preparation Error: A setup mistake before executing the step . Using the wrong or dirty utensil, not washing/peeling/draining ingredients,insufficient draining of fluid, cutting/chopping without peeling which makes correct execution difficult or unsafe. 3. Measurement Error: An error in quantity —wrong counts, volumes, weights, or units. Mixing up teaspoons and tablespoons, misreading a scale, or miscounting items leads to off ratios and predictable taste or texture problems. 4. Temperature Error: A mistake in heat level or thermal state — the applied temperature, starting temperature, or thermal transition is wrong. Not preheating, using the wrong microwave power, overheating oil, or adding cold liquid when warm is required often causes burning, undercooking, or split emulsions. 5. Timing Error: A mistake in duration – over- or under-doing a step or skipping required rests, proofs, or cooling periods. Overcooking, underblending, or cutting resting time short typically yields incorrect doneness or unstable textures.
+
+Do not repeat previously detected mistakes. Here are the feedbacks corresponding to previously detected mistakes:["You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly."]. Assume the recipe step is still in progress. Your task is to identify any mistake that’s already visible in the partially completed step. Do no penalize partially competed recipe steps. If you observe a mistake answer‘YES’, else ‘No’. Your response MUST BEGIN WITH ‘YES’ or ‘NO’. In case you answer ‘YES’, please follow with a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). Directly address the person.
+
+Current observation: The person added one teaspoon of salt to the bowl, put the spoon away, and stopped adding salt.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+RESPONSE: YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.
+{"case": "盐量不足", "variant": "完全相同观察", "first_raw": "YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.", "history_feedback": "You only added one teaspoon of salt, but the instruction requires two teaspoons. Youneed to add one more teaspoon to complete the step correctly.", "second_raw": "YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.", "expected_decision": "NO", "status": "ok", "repeated_trigger": true, "second_feedback": "You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.", "exact_same_text": true, "same_ignoring_case_whitespace": true, "text_similarity": 1.0}
+
+--- 盐量不足 / 几乎相同观察: INPUT ---
+<|im_start|>user
+You are an expert cooking assistant who is observing a person cook. You should look out for mistakes made by the person.
+
+##INSTRUCTIONS: The person is trying to complete the following recipe step: Add two teaspoons of salt to the bowl.. Your task is to check if the person is aboutto make or has already made a mistake. Mistakes occur when the person performs actions that deviates from the instruction and DIRECTLY INTERFERES WITH SUCCESSFUL INSTRUCTION COMPLETION. Do not penalize actions that do not directly interfere with instruction completion (e.g. washing broccoli before cutting, if the instruction just says ‘cut broccoli’).
+
+Here are some common types of mistakes that you should look out for: 1. Technique Error: A mistake in how a step is physically performed. Examples include chopping with the wrong motion, stirring when folding is required, or spilling during transfer, producing uneven cuts or texture issues even when tools and amounts are right. Ignore minor technique errors such as not holding or gripping objects properly, holding with a risk of dropping etc. that do not interfere directly withrecipe completion. 2. Preparation Error: A setup mistake before executing the step . Using the wrong or dirty utensil, not washing/peeling/draining ingredients,insufficient draining of fluid, cutting/chopping without peeling which makes correct execution difficult or unsafe. 3. Measurement Error: An error in quantity —wrong counts, volumes, weights, or units. Mixing up teaspoons and tablespoons, misreading a scale, or miscounting items leads to off ratios and predictable taste or texture problems. 4. Temperature Error: A mistake in heat level or thermal state — the applied temperature, starting temperature, or thermal transition is wrong. Not preheating, using the wrong microwave power, overheating oil, or adding cold liquid when warm is required often causes burning, undercooking, or split emulsions. 5. Timing Error: A mistake in duration – over- or under-doing a step or skipping required rests, proofs, or cooling periods. Overcooking, underblending, or cutting resting time short typically yields incorrect doneness or unstable textures.
+
+Do not repeat previously detected mistakes. Here are the feedbacks corresponding to previously detected mistakes:["You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly."]. Assume the recipe step is still in progress. Your task is to identify any mistake that’s already visible in the partially completed step. Do no penalize partially competed recipe steps. If you observe a mistake answer‘YES’, else ‘No’. Your response MUST BEGIN WITH ‘YES’ or ‘NO’. In case you answer ‘YES’, please follow with a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). Directly address the person.
+
+Current observation: The person added one teaspoon of salt to the bowl, put the spoon away, and stopped adding salt. No additional action occurred; the state isunchanged.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+RESPONSE: YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.
+{"case": "盐量不足", "variant": "几乎相同观察", "first_raw": "YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.", "history_feedback": "You only added one teaspoon of salt, but the instruction requires two teaspoons. Youneed to add one more teaspoon to complete the step correctly.", "second_raw": "YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.", "expected_decision": "NO", "status": "ok", "repeated_trigger": true, "second_feedback": "You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.", "exact_same_text": true, "same_ignoring_case_whitespace": true, "text_similarity": 1.0}
+
+--- 油量不足 / 首轮: INPUT ---
+<|im_start|>user
+You are an expert cooking assistant who is observing a person cook. You should look out for mistakes made by the person.
+
+##INSTRUCTIONS: The person is trying to complete the following recipe step: Put three teaspoons of sesame oil in the bowl.. Your task is to check if the person is about to make or has already made a mistake. Mistakes occur when the person performs actions that deviates from the instruction and DIRECTLY INTERFERES WITH SUCCESSFUL INSTRUCTION COMPLETION. Do not penalize actions that do not directly interfere with instruction completion (e.g. washing broccoli before cutting, if the instruction just says ‘cut broccoli’).
+
+Here are some common types of mistakes that you should look out for: 1. Technique Error: A mistake in how a step is physically performed. Examples include chopping with the wrong motion, stirring when folding is required, or spilling during transfer, producing uneven cuts or texture issues even when tools and amounts are right. Ignore minor technique errors such as not holding or gripping objects properly, holding with a risk of dropping etc. that do not interfere directly withrecipe completion. 2. Preparation Error: A setup mistake before executing the step . Using the wrong or dirty utensil, not washing/peeling/draining ingredients,insufficient draining of fluid, cutting/chopping without peeling which makes correct execution difficult or unsafe. 3. Measurement Error: An error in quantity —wrong counts, volumes, weights, or units. Mixing up teaspoons and tablespoons, misreading a scale, or miscounting items leads to off ratios and predictable taste or texture problems. 4. Temperature Error: A mistake in heat level or thermal state — the applied temperature, starting temperature, or thermal transition is wrong. Not preheating, using the wrong microwave power, overheating oil, or adding cold liquid when warm is required often causes burning, undercooking, or split emulsions. 5. Timing Error: A mistake in duration – over- or under-doing a step or skipping required rests, proofs, or cooling periods. Overcooking, underblending, or cutting resting time short typically yields incorrect doneness or unstable textures.
+
+Do not repeat previously detected mistakes. Here are the feedbacks corresponding to previously detected mistakes:[]. Assume the recipe step is still in progress. Your task is to identify any mistake that’s already visible in the partially completed step. Do no penalize partially competed recipe steps. If you observe a mistake answer ‘YES’, else ‘No’. Your response MUST BEGIN WITH ‘YES’ or ‘NO’. In case you answer ‘YES’, please follow with a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). Directly address the person.
+
+Current observation: The person added two teaspoons of sesame oil to the bowl, put the spoon away, and stopped adding oil.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+RESPONSE: YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.
+
+--- 油量不足 / 完全相同观察: INPUT ---
+<|im_start|>user
+You are an expert cooking assistant who is observing a person cook. You should look out for mistakes made by the person.
+
+##INSTRUCTIONS: The person is trying to complete the following recipe step: Put three teaspoons of sesame oil in the bowl.. Your task is to check if the person is about to make or has already made a mistake. Mistakes occur when the person performs actions that deviates from the instruction and DIRECTLY INTERFERES WITH SUCCESSFUL INSTRUCTION COMPLETION. Do not penalize actions that do not directly interfere with instruction completion (e.g. washing broccoli before cutting, if the instruction just says ‘cut broccoli’).
+
+Here are some common types of mistakes that you should look out for: 1. Technique Error: A mistake in how a step is physically performed. Examples include chopping with the wrong motion, stirring when folding is required, or spilling during transfer, producing uneven cuts or texture issues even when tools and amounts are right. Ignore minor technique errors such as not holding or gripping objects properly, holding with a risk of dropping etc. that do not interfere directly withrecipe completion. 2. Preparation Error: A setup mistake before executing the step . Using the wrong or dirty utensil, not washing/peeling/draining ingredients,insufficient draining of fluid, cutting/chopping without peeling which makes correct execution difficult or unsafe. 3. Measurement Error: An error in quantity —wrong counts, volumes, weights, or units. Mixing up teaspoons and tablespoons, misreading a scale, or miscounting items leads to off ratios and predictable taste or texture problems. 4. Temperature Error: A mistake in heat level or thermal state — the applied temperature, starting temperature, or thermal transition is wrong. Not preheating, using the wrong microwave power, overheating oil, or adding cold liquid when warm is required often causes burning, undercooking, or split emulsions. 5. Timing Error: A mistake in duration – over- or under-doing a step or skipping required rests, proofs, or cooling periods. Overcooking, underblending, or cutting resting time short typically yields incorrect doneness or unstable textures.
+
+Do not repeat previously detected mistakes. Here are the feedbacks corresponding to previously detected mistakes:["You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly."]. Assume the recipe step is still in progress. Your task is to identify any mistake that’s already visible in the partially completed step. Do no penalize partially competed recipe steps. If you observe a mistake answer ‘YES’, else ‘No’. Your response MUST BEGIN WITH ‘YES’ or ‘NO’. In case you answer ‘YES’, please follow with a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). Directly address the person.
+
+Current observation: The person added two teaspoons of sesame oil to the bowl, put the spoon away, and stopped adding oil.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+RESPONSE: YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.
+{"case": "油量不足", "variant": "完全相同观察", "first_raw": "YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.", "history_feedback": "You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.", "second_raw": "YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.", "expected_decision": "NO", "status": "ok", "repeated_trigger": true, "second_feedback": "You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.", "exact_same_text": true, "same_ignoring_case_whitespace": true, "text_similarity": 1.0}
+
+--- 油量不足 / 几乎相同观察: INPUT ---
+<|im_start|>user
+You are an expert cooking assistant who is observing a person cook. You should look out for mistakes made by the person.
+
+##INSTRUCTIONS: The person is trying to complete the following recipe step: Put three teaspoons of sesame oil in the bowl.. Your task is to check if the person is about to make or has already made a mistake. Mistakes occur when the person performs actions that deviates from the instruction and DIRECTLY INTERFERES WITH SUCCESSFUL INSTRUCTION COMPLETION. Do not penalize actions that do not directly interfere with instruction completion (e.g. washing broccoli before cutting, if the instruction just says ‘cut broccoli’).
+
+Here are some common types of mistakes that you should look out for: 1. Technique Error: A mistake in how a step is physically performed. Examples include chopping with the wrong motion, stirring when folding is required, or spilling during transfer, producing uneven cuts or texture issues even when tools and amounts are right. Ignore minor technique errors such as not holding or gripping objects properly, holding with a risk of dropping etc. that do not interfere directly withrecipe completion. 2. Preparation Error: A setup mistake before executing the step . Using the wrong or dirty utensil, not washing/peeling/draining ingredients,insufficient draining of fluid, cutting/chopping without peeling which makes correct execution difficult or unsafe. 3. Measurement Error: An error in quantity —wrong counts, volumes, weights, or units. Mixing up teaspoons and tablespoons, misreading a scale, or miscounting items leads to off ratios and predictable taste or texture problems. 4. Temperature Error: A mistake in heat level or thermal state — the applied temperature, starting temperature, or thermal transition is wrong. Not preheating, using the wrong microwave power, overheating oil, or adding cold liquid when warm is required often causes burning, undercooking, or split emulsions. 5. Timing Error: A mistake in duration – over- or under-doing a step or skipping required rests, proofs, or cooling periods. Overcooking, underblending, or cutting resting time short typically yields incorrect doneness or unstable textures.
+
+Do not repeat previously detected mistakes. Here are the feedbacks corresponding to previously detected mistakes:["You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly."]. Assume the recipe step is still in progress. Your task is to identify any mistake that’s already visible in the partially completed step. Do no penalize partially competed recipe steps. If you observe a mistake answer ‘YES’, else ‘No’. Your response MUST BEGIN WITH ‘YES’ or ‘NO’. In case you answer ‘YES’, please follow with a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). Directly address the person.
+
+Current observation: The person added two teaspoons of sesame oil to the bowl, put the spoon away, and stopped adding oil. No additional action occurred; the state is unchanged.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+RESPONSE: YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.
+{"case": "油量不足", "variant": "几乎相同观察", "first_raw": "YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.", "history_feedback": "You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.", "second_raw": "YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.", "expected_decision": "NO", "status": "ok", "repeated_trigger": true, "second_feedback": "You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.", "exact_same_text": true, "same_ignoring_case_whitespace": true, "text_similarity": 1.0}
+
+--- 温度错误 / 首轮: INPUT ---
+<|im_start|>user
+You are an expert cooking assistant who is observing a person cook. You should look out for mistakes made by the person.
+
+##INSTRUCTIONS: The person is trying to complete the following recipe step: Set the oven to 180 degrees Celsius.. Your task is to check if the person is about to make or has already made a mistake. Mistakes occur when the person performs actions that deviates from the instruction and DIRECTLY INTERFERES WITH SUCCESSFUL INSTRUCTION COMPLETION. Do not penalize actions that do not directly interfere with instruction completion (e.g. washing broccoli before cutting, if the instruction just says ‘cut broccoli’).
+
+Here are some common types of mistakes that you should look out for: 1. Technique Error: A mistake in how a step is physically performed. Examples include chopping with the wrong motion, stirring when folding is required, or spilling during transfer, producing uneven cuts or texture issues even when tools and amounts are right. Ignore minor technique errors such as not holding or gripping objects properly, holding with a risk of dropping etc. that do not interfere directly withrecipe completion. 2. Preparation Error: A setup mistake before executing the step . Using the wrong or dirty utensil, not washing/peeling/draining ingredients,insufficient draining of fluid, cutting/chopping without peeling which makes correct execution difficult or unsafe. 3. Measurement Error: An error in quantity —wrong counts, volumes, weights, or units. Mixing up teaspoons and tablespoons, misreading a scale, or miscounting items leads to off ratios and predictable taste or texture problems. 4. Temperature Error: A mistake in heat level or thermal state — the applied temperature, starting temperature, or thermal transition is wrong. Not preheating, using the wrong microwave power, overheating oil, or adding cold liquid when warm is required often causes burning, undercooking, or split emulsions. 5. Timing Error: A mistake in duration – over- or under-doing a step or skipping required rests, proofs, or cooling periods. Overcooking, underblending, or cutting resting time short typically yields incorrect doneness or unstable textures.
+
+Do not repeat previously detected mistakes. Here are the feedbacks corresponding to previously detected mistakes:[]. Assume the recipe step is still in progress. Your task is to identify any mistake that’s already visible in the partially completed step. Do no penalize partially competed recipe steps. If you observe a mistake answer ‘YES’, else ‘No’. Your response MUST BEGIN WITH ‘YES’ or ‘NO’. In case you answer ‘YES’, please follow with a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). Directly address the person.
+
+Current observation: The person set the oven to 220 degrees Celsius, confirmed the setting, and walked away.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+RESPONSE: YES. You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.
+
+--- 温度错误 / 完全相同观察: INPUT ---
+<|im_start|>user
+You are an expert cooking assistant who is observing a person cook. You should look out for mistakes made by the person.
+
+##INSTRUCTIONS: The person is trying to complete the following recipe step: Set the oven to 180 degrees Celsius.. Your task is to check if the person is about to make or has already made a mistake. Mistakes occur when the person performs actions that deviates from the instruction and DIRECTLY INTERFERES WITH SUCCESSFUL INSTRUCTION COMPLETION. Do not penalize actions that do not directly interfere with instruction completion (e.g. washing broccoli before cutting, if the instruction just says ‘cut broccoli’).
+
+Here are some common types of mistakes that you should look out for: 1. Technique Error: A mistake in how a step is physically performed. Examples include chopping with the wrong motion, stirring when folding is required, or spilling during transfer, producing uneven cuts or texture issues even when tools and amounts are right. Ignore minor technique errors such as not holding or gripping objects properly, holding with a risk of dropping etc. that do not interfere directly withrecipe completion. 2. Preparation Error: A setup mistake before executing the step . Using the wrong or dirty utensil, not washing/peeling/draining ingredients,insufficient draining of fluid, cutting/chopping without peeling which makes correct execution difficult or unsafe. 3. Measurement Error: An error in quantity —wrong counts, volumes, weights, or units. Mixing up teaspoons and tablespoons, misreading a scale, or miscounting items leads to off ratios and predictable taste or texture problems. 4. Temperature Error: A mistake in heat level or thermal state — the applied temperature, starting temperature, or thermal transition is wrong. Not preheating, using the wrong microwave power, overheating oil, or adding cold liquid when warm is required often causes burning, undercooking, or split emulsions. 5. Timing Error: A mistake in duration – over- or under-doing a step or skipping required rests, proofs, or cooling periods. Overcooking, underblending, or cutting resting time short typically yields incorrect doneness or unstable textures.
+
+Do not repeat previously detected mistakes. Here are the feedbacks corresponding to previously detected mistakes:["You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done."]. Assume the recipe step is still in progress. Your task is to identify any mistake that’s already visible in the partially completed step. Do no penalize partially competed recipe steps. If you observe a mistake answer ‘YES’, else ‘No’. Your response MUST BEGIN WITH ‘YES’ or ‘NO’. In case you answer ‘YES’, please follow with a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). Directly address the person.
+
+Current observation: The person set the oven to 220 degrees Celsius, confirmed the setting, and walked away.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+RESPONSE: NO
+{"case": "温度错误", "variant": "完全相同观察", "first_raw": "YES. You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.", "history_feedback": "You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.", "second_raw": "NO", "expected_decision": "NO", "status": "ok", "repeated_trigger": false, "second_feedback": ""}
+
+--- 温度错误 / 几乎相同观察: INPUT ---
+<|im_start|>user
+You are an expert cooking assistant who is observing a person cook. You should look out for mistakes made by the person.
+
+##INSTRUCTIONS: The person is trying to complete the following recipe step: Set the oven to 180 degrees Celsius.. Your task is to check if the person is about to make or has already made a mistake. Mistakes occur when the person performs actions that deviates from the instruction and DIRECTLY INTERFERES WITH SUCCESSFUL INSTRUCTION COMPLETION. Do not penalize actions that do not directly interfere with instruction completion (e.g. washing broccoli before cutting, if the instruction just says ‘cut broccoli’).
+
+Here are some common types of mistakes that you should look out for: 1. Technique Error: A mistake in how a step is physically performed. Examples include chopping with the wrong motion, stirring when folding is required, or spilling during transfer, producing uneven cuts or texture issues even when tools and amounts are right. Ignore minor technique errors such as not holding or gripping objects properly, holding with a risk of dropping etc. that do not interfere directly withrecipe completion. 2. Preparation Error: A setup mistake before executing the step . Using the wrong or dirty utensil, not washing/peeling/draining ingredients,insufficient draining of fluid, cutting/chopping without peeling which makes correct execution difficult or unsafe. 3. Measurement Error: An error in quantity —wrong counts, volumes, weights, or units. Mixing up teaspoons and tablespoons, misreading a scale, or miscounting items leads to off ratios and predictable taste or texture problems. 4. Temperature Error: A mistake in heat level or thermal state — the applied temperature, starting temperature, or thermal transition is wrong. Not preheating, using the wrong microwave power, overheating oil, or adding cold liquid when warm is required often causes burning, undercooking, or split emulsions. 5. Timing Error: A mistake in duration – over- or under-doing a step or skipping required rests, proofs, or cooling periods. Overcooking, underblending, or cutting resting time short typically yields incorrect doneness or unstable textures.
+
+Do not repeat previously detected mistakes. Here are the feedbacks corresponding to previously detected mistakes:["You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done."]. Assume the recipe step is still in progress. Your task is to identify any mistake that’s already visible in the partially completed step. Do no penalize partially competed recipe steps. If you observe a mistake answer ‘YES’, else ‘No’. Your response MUST BEGIN WITH ‘YES’ or ‘NO’. In case you answer ‘YES’, please follow with a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). Directly address the person.
+
+Current observation: The person set the oven to 220 degrees Celsius, confirmed the setting, and walked away. No additional action occurred; the state is unchanged.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+RESPONSE: NO
+{"case": "温度错误", "variant": "几乎相同观察", "first_raw": "YES. You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.", "history_feedback": "You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.", "second_raw": "NO", "expected_decision": "NO", "status": "ok", "repeated_trigger": false, "second_feedback": ""}
+
+--- REPEAT SUMMARY ---
+[
+  {
+    "case": "盐量不足",
+    "variant": "完全相同观察",
+    "first_raw": "YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.",
+    "history_feedback": "You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the stepcorrectly.",
+    "second_raw": "YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.",
+    "expected_decision": "NO",
+    "status": "ok",
+    "repeated_trigger": true,
+    "second_feedback": "You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.",
+    "exact_same_text": true,
+    "same_ignoring_case_whitespace": true,
+    "text_similarity": 1.0
+  },
+  {
+    "case": "盐量不足",
+    "variant": "几乎相同观察",
+    "first_raw": "YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.",
+    "history_feedback": "You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the stepcorrectly.",
+    "second_raw": "YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.",
+    "expected_decision": "NO",
+    "status": "ok",
+    "repeated_trigger": true,
+    "second_feedback": "You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.",
+    "exact_same_text": true,
+    "same_ignoring_case_whitespace": true,
+    "text_similarity": 1.0
+  },
+  {
+    "case": "油量不足",
+    "variant": "完全相同观察",
+    "first_raw": "YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.",
+    "history_feedback": "You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.",
+    "second_raw": "YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.",
+    "expected_decision": "NO",
+    "status": "ok",
+    "repeated_trigger": true,
+    "second_feedback": "You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.",
+    "exact_same_text": true,
+    "same_ignoring_case_whitespace": true,
+    "text_similarity": 1.0
+  },
+  {
+    "case": "油量不足",
+    "variant": "几乎相同观察",
+    "first_raw": "YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.",
+    "history_feedback": "You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.",
+    "second_raw": "YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.",
+    "expected_decision": "NO",
+    "status": "ok",
+    "repeated_trigger": true,
+    "second_feedback": "You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.",
+    "exact_same_text": true,
+    "same_ignoring_case_whitespace": true,
+    "text_similarity": 1.0
+  },
+  {
+    "case": "温度错误",
+    "variant": "完全相同观察",
+    "first_raw": "YES. You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.",
+    "history_feedback": "You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.",
+    "second_raw": "NO",
+    "expected_decision": "NO",
+    "status": "ok",
+    "repeated_trigger": false,
+    "second_feedback": ""
+  },
+  {
+    "case": "温度错误",
+    "variant": "几乎相同观察",
+    "first_raw": "YES. You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.",
+    "history_feedback": "You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.",
+    "second_raw": "NO",
+    "expected_decision": "NO",
+    "status": "ok",
+    "repeated_trigger": false,
+    "second_feedback": ""
+  }
+]

@@ -1,6 +1,6 @@
 # Qwen 系列模型实验结果分析
 
-分析日期：2026-11-16。
+基础模型评测分析日期：2026-11-16。重复反馈诊断补充日期：2026-11-17。
 
 ## 结论
 
@@ -121,3 +121,155 @@ IC-Acc 达到 26.1%，比 9B 高 **14.7 个百分点**，比 30B 高 **7.5 个�
 - [实验协议与复现限制](README.md)
 
 本报告基于已有结果和日志进行分析，未重新运行模型推理或官方 GPU 评分。
+
+## 补充实验：Qwen3.5-9B 重复反馈与指令遵循诊断（2026-11-17）
+
+### 目的、数据来源与边界
+
+本节检查：在历史反馈已经进入提示词的条件下，9B 是否仍对同一次错误再次触发提醒，以及生成的反馈是否与历史逐字相同。采用纯文本观察替代视频，先排除视觉理解的干扰。这是局部诊断，不是完整视频实验或官方基准评测，不能将其通过率与前文的 Precision、Recall、F1 比较。
+
+结果来自用户在服务器执行 `test_9b_following.py` 后提供的终端日志；本次整理没有重新执行真实模型推理。已将两份原始粘贴内容原样归档，包含完整渲染输入、输出及运行警告：
+
+- [实验一：YES/NO 与 A/B/C 对照完整日志](reports/feedback_repeat_2026-11-17/decision_abc.log)
+- [实验二：真实反馈生成与重复比较完整日志](reports/feedback_repeat_2026-11-17/repeat_original.log)
+
+归档保留用户粘贴时的文本，包括部分词间空格缺失；不将其视为服务器原始字节级日志。以下反馈原文按日志中的 `RESPONSE`/`second_raw` 展示。模型按用户运行上下文标识为 Qwen3.5-9B；本次日志没有完整记录模型路径、权重修订、Transformers 版本、精度和硬件，因此不能仅凭这些结果比较不同模型规模。
+
+### 实验一：简短规则下的 YES/NO 判断
+
+设置：纯文本、单条 user 消息、`enable_thinking=False`、`do_sample=False`，不携带跨调用 KV 状态。该轮脚本生成上限为 64 tokens，只要求输出 YES/NO，不生成具体纠正反馈。渲染模板中出现空 `<think>...</think>`，与显式关闭 thinking 的调用设置相符，本身不代表启用了思考。
+
+共同规则原文：
+
+```text
+You are checking cooking mistakes.
+Output exactly YES or NO, with no explanation.
+Output YES only if the current observation describes a NEW mistake.
+Output NO if there is no mistake, or if the SAME mistake was already reported.
+A mistake remaining uncorrected is not a new mistake.
+```
+
+每次按 `Previous feedback: <JSON 数组>` 和 `Current observation: <观察>` 输入。七项结果如下，所有回答均符合 YES/NO 格式。
+
+| 条件 | 预期 | 实际 | 判定 |
+| --- | --- | --- | --- |
+| 正确添加盐，无错误 | NO | NO | 通过 |
+| 要求两勺盐，仅加一勺后停止；无历史反馈 | YES | YES | 通过 |
+| 历史直接描述同一次少加盐错误，观察明确没有新动作 | NO | NO | 通过 |
+| A：历史只描述错误 | NO | NO | 通过 |
+| B：历史只给纠正建议 | NO | YES | 失败 |
+| C：历史同时描述错误和纠正建议 | NO | NO | 通过 |
+| 已纠正盐量，但新出现错加醋的问题 | YES | YES | 通过 |
+
+基础四项的完整输入内容：
+
+| 条件 | Previous feedback | Current observation |
+| --- | --- | --- |
+| 无错误 | `[]` | The required amount of salt was added correctly. |
+| 新错误 | `[]` | The recipe requires two teaspoons of salt, but the person finished after adding only one. |
+| 同一次错误，文字直接对应 | `["You added only one teaspoon of salt instead of two."]` | This is the SAME previously reported incident. The person added only one teaspoon instead of two. Nothing new happened. |
+| 新出现其他错误 | `["Add one more teaspoon of salt."]` | The person has now corrected the salt amount. Then they added vinegar, although the recipe explicitly requires lemon juice. |
+
+A/B/C 三组除历史反馈外保持完全一致，共同观察原文：
+
+```text
+This is the SAME incident. The bowl still contains just one teaspoon of salt. No additional action occurred.
+```
+
+三组历史反馈分别为单元素数组：
+
+```text
+A: You added only one teaspoon instead of the required two.
+B: Add one more teaspoon of salt to reach two teaspoons.
+C: You added only one teaspoon instead of two. Add one more teaspoon.
+```
+
+结果为 6/7 通过。该组对照支持：在这个案例和简短规则下，9B 能处理直接描述错误的历史，但将纠正建议映射回已报告错误时出现失败。它不能证明模型普遍不具备语义匹配能力。特别是，此轮 B 的 YES 只表示重复触发检测，不能证明会重复输出相同反馈文字，因为此轮根本没有要求生成反馈。
+
+此前第一次五项预试验同样在“同一次错误，换一种说法”项失败，结果为 4/5；其观察、历史与 A/B/C 中 B 相同，属于相同输入的复现，不是新增独立样本，也不计入本节 6/7 的分母。
+
+### 实验二：论文详细提示词下的真实反馈重复
+
+设置：使用项目 `prompt_for('mistake', ..., 'detailed')` 构建的论文详细错误检测提示词，替换当前指令和历史反馈占位符，再追加 `Current observation` 文字观察。没有视频、没有额外 assistant 历史消息。`enable_thinking=False`、`do_sample=False`、`max_new_tokens=256`；输出要求为 `NO` 或 `YES. <feedback>`。
+
+每个场景先以空历史生成首轮反馈；去掉响应的 YES 前缀，将反馈正文原样填入下一轮历史数组。随后做两次相互独立的调用，两者均只使用首轮反馈作为历史，彼此不累积输出：
+
+1. 完全相同观察：指令和观察文字不变，仅将空历史替换为首轮反馈。
+2. 几乎相同观察：在第一种条件末尾追加 `No additional action occurred; the state is unchanged.`。
+
+下一轮没有新错误，预期都为 NO。各场景完整指令、观察及首轮输出如下。
+
+**盐量不足**
+
+```text
+Instruction: Add two teaspoons of salt to the bowl.
+Observation: The person added one teaspoon of salt to the bowl, put the spoon away, and stopped adding salt.
+First response: YES. You only added one teaspoon of salt, but the instruction requires two teaspoons. You need to add one more teaspoon to complete the step correctly.
+```
+
+**油量不足**
+
+```text
+Instruction: Put three teaspoons of sesame oil in the bowl.
+Observation: The person added two teaspoons of sesame oil to the bowl, put the spoon away, and stopped adding oil.
+First response: YES. You only added two teaspoons of sesame oil, but the instruction requires three teaspoons. Please add one more teaspoon to complete the step correctly.
+```
+
+**温度错误**
+
+```text
+Instruction: Set the oven to 180 degrees Celsius.
+Observation: The person set the oven to 220 degrees Celsius, confirmed the setting, and walked away.
+First response: YES. You set the oven to 220 degrees Celsius, but the recipe requires 180 degrees Celsius. This temperature error will likely cause your food to cook too quickly and burn before it is properly done.
+```
+
+首轮三项均输出 YES 并包含反馈。下一轮全部结果如下；“逐字相同”比较去掉 YES 前缀后的反馈正文，不比较整份提示词。
+
+| 场景 | 下一轮观察 | 预期 | 实际 | 再次触发 | 与首轮反馈逐字相同 | 文本相似度 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 盐量不足 | 完全相同 | NO | YES＋首轮原文 | 是 | 是 | 1.000 |
+| 盐量不足 | 几乎相同 | NO | YES＋首轮原文 | 是 | 是 | 1.000 |
+| 油量不足 | 完全相同 | NO | YES＋首轮原文 | 是 | 是 | 1.000 |
+| 油量不足 | 几乎相同 | NO | YES＋首轮原文 | 是 | 是 | 1.000 |
+| 温度错误 | 完全相同 | NO | NO | 否 | 不适用 | 不适用 |
+| 温度错误 | 几乎相同 | NO | NO | 否 | 不适用 | 不适用 |
+
+四次重复响应的完整文本分别就是上述盐量和油量的首轮响应；两次温度响应均完整输出 `NO`，无反馈正文。重复项的 `exact_same_text` 和 `same_ignoring_case_whitespace` 都为 true，`text_similarity` 都为 1.0。相似度来自字符序列比较，不是语义评测。
+
+在这六个后续调用中，4/6 再次触发且逐字重复，2/6 正确保持静默。按场景看是两个场景的两种观察均失败、一个场景的两种观察均通过。六次调用共享三个场景及各自首轮反馈，不能当作六个独立错误事件；4/6 仅是本次诊断结果，不是实际视频任务的总体重复率。
+
+### 综合分析
+
+**已被直接支持的结论：**
+
+1. 在该运行设置下，纯文本输入即可复现逐字重复。视频、长视频上下文和异步缓存竞争不是这次复现的必要条件；这不排除它们影响完整视频实验。
+2. 反馈正文已进入渲染输入中的历史数组，因此不能用“历史根本没传进去”解释此次输出。当前日志仍不是完整 token 张量或模型内部注意力证据，不能据此声称已证明模型内部如何处理历史。
+3. 模型并非完全不使用去重规则：温度场景能正确输出 NO，但盐和油场景未能遵守。样本不足以断言所有计量错误都比温度错误难。
+4. 实验一提出的“建议型反馈难匹配错误”只能解释局部现象：实验二中盐和油的历史均包含错误事实与建议，仍逐字重复，因此单纯把反馈改成“事实＋建议”不能视为已验证的解决方案。
+
+**仍需验证的解释：**详细提示词同时要求“不重复已检测错误”和“观察到错误就回答 YES”，但没有明确规定“错误依然存在、已经提醒、没有新错误”时的决策优先级。模型可能优先响应可见错误而忽略历史排除条件。该解释与结果相容，尚未通过提示词消融证实。实验一与实验二还同时改变了提示词长度、措辞、输出任务和具体历史，因此不能直接把两轮差异归因于某一个因素。
+
+当前未比较其他模型规模、thinking 开关或多种措辞的大样本结果，不能判定主要原因是 9B 参数量不足、模型通用能力不足、提示词长度，或生成模式。确定性解码下再次运行同一输入不是独立统计证据。
+
+### 待运行对照：追加明确的去重决策规则
+
+测试脚本现已增加 `original` 与 `explicit_dedup` 两种后续调用。两者共用原提示词生成的同一条首轮反馈和同一观察，仅后者在整份输入末尾追加：
+
+```text
+Before answering, compare the current mistake with the previous feedback.
+If the same mistake was already reported and no new mistake occurred,
+answer NO, even if the mistake remains uncorrected.
+Answer YES only for a new, previously unreported mistake.
+```
+
+三场景 × 两种观察 × 两种策略，共 12 次后续比较，加上 3 次首轮生成。脚本保留原始输出，分别汇总重复触发、逐字重复和解析失败。运行方式：
+
+```bash
+CUDA_VISIBLE_DEVICES=2 python test_9b_following.py \
+  --model-path /实际模型绝对路径/Qwen3.5-9B \
+  --mode repeat
+```
+
+**这组追加规则的真实模型结果尚未提供，不能报告去重率提升。** 已完成的是本地模拟响应验证：确认配对输入只差追加规则、历史反馈共享、重复输出与 NO 可分别记录。追加规则会改变论文提示词，应作为独立对照，不改写原基线结果。若新规则有效，还需增加“已纠正后再次犯错”“出现不同新错误”等负向控制，排除模型仅仅更倾向于输出 NO。
+
+原始测试日志包含缺少 `causal_conv1d`、`flash-linear-attention` 时回退到参考 PyTorch 实现的警告，其文字明确标注正确但更慢。日志没有提供证据表明这些警告导致本次重复反馈，也没有开展优化内核与参考实现的一致性对照。

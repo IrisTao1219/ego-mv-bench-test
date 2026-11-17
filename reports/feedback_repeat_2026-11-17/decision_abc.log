@@ -1,0 +1,139 @@
+--- 没有错误: INPUT ---
+<|im_start|>user
+You are checking cooking mistakes.
+Output exactly YES or NO, with no explanation.
+Output YES only if the current observation describes a NEW mistake.
+Output NO if there is no mistake, or if the SAME mistake was already reported.
+A mistake remaining uncorrected is not a new mistake.
+
+Previous feedback: []
+Current observation: The required amount of salt was added correctly.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+{"case": "没有错误", "expected": "NO", "actual": "NO", "passed": true}
+
+--- 新错误: INPUT ---
+<|im_start|>user
+You are checking cooking mistakes.
+Output exactly YES or NO, with no explanation.
+Output YES only if the current observation describes a NEW mistake.
+Output NO if there is no mistake, or if the SAME mistake was already reported.
+A mistake remaining uncorrected is not a new mistake.
+
+Previous feedback: []
+Current observation: The recipe requires two teaspoons of salt, but the person finished after adding only one.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+{"case": "新错误", "expected": "YES", "actual": "YES", "passed": true}
+
+--- 同一次错误，文字直接对应: INPUT ---
+<|im_start|>user
+You are checking cooking mistakes.
+Output exactly YES or NO, with no explanation.
+Output YES only if the current observation describes a NEW mistake.
+Output NO if there is no mistake, or if the SAME mistake was already reported.
+A mistake remaining uncorrected is not a new mistake.
+
+Previous feedback: ["You added only one teaspoon of salt instead of two."]
+Current observation: This is the SAME previously reported incident. The person added only one teaspoon instead of two. Nothing new happened.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+{"case": "同一次错误，文字直接对应", "expected": "NO", "actual": "NO", "passed": true}
+
+--- A：只描述错误: INPUT ---
+<|im_start|>user
+You are checking cooking mistakes.
+Output exactly YES or NO, with no explanation.
+Output YES only if the current observation describes a NEW mistake.
+Output NO if there is no mistake, or if the SAME mistake was already reported.
+A mistake remaining uncorrected is not a new mistake.
+
+Previous feedback: ["You added only one teaspoon instead of the required two."]
+Current observation: This is the SAME incident. The bowl still contains just one teaspoon of salt. No additional action occurred.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+{"case": "A：只描述错误", "expected": "NO", "actual": "NO", "passed": true}
+
+--- B：只给纠正建议: INPUT ---
+<|im_start|>user
+You are checking cooking mistakes.
+Output exactly YES or NO, with no explanation.
+Output YES only if the current observation describes a NEW mistake.
+Output NO if there is no mistake, or if the SAME mistake was already reported.
+A mistake remaining uncorrected is not a new mistake.
+
+Previous feedback: ["Add one more teaspoon of salt to reach two teaspoons."]
+Current observation: This is the SAME incident. The bowl still contains just one teaspoon of salt. No additional action occurred.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+{"case": "B：只给纠正建议", "expected": "NO", "actual": "YES", "passed": false}
+
+--- C：错误描述＋纠正建议: INPUT ---
+<|im_start|>user
+You are checking cooking mistakes.
+Output exactly YES or NO, with no explanation.
+Output YES only if the current observation describes a NEW mistake.
+Output NO if there is no mistake, or if the SAME mistake was already reported.
+A mistake remaining uncorrected is not a new mistake.
+
+Previous feedback: ["You added only one teaspoon instead of two. Add one more teaspoon."]
+Current observation: This is the SAME incident. The bowl still contains just one teaspoon of salt. No additional action occurred.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+{"case": "C：错误描述＋纠正建议", "expected": "NO", "actual": "NO", "passed": true}
+
+--- 已提醒盐的问题，但出现新错误: INPUT ---
+<|im_start|>user
+You are checking cooking mistakes.
+Output exactly YES or NO, with no explanation.
+Output YES only if the current observation describes a NEW mistake.
+Output NO if there is no mistake, or if the SAME mistake was already reported.
+A mistake remaining uncorrected is not a new mistake.
+
+Previous feedback: ["Add one more teaspoon of salt."]
+Current observation: The person has now corrected the salt amount. Then they added vinegar, although the recipe explicitly requires lemon juice.<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+
+{"case": "已提醒盐的问题，但出现新错误", "expected": "YES", "actual": "YES", "passed": true}
+
+--- SUMMARY ---
+没有错误: expected=NO actual='NO' passed=True
+新错误: expected=YES actual='YES' passed=True
+同一次错误，文字直接对应: expected=NO actual='NO' passed=True
+A：只描述错误: expected=NO actual='NO' passed=True
+B：只给纠正建议: expected=NO actual='YES' passed=False
+C：错误描述＋纠正建议: expected=NO actual='NO' passed=True
+已提醒盐的问题，但出现新错误: expected=YES actual='YES' passed=True
+Passed: 6/7

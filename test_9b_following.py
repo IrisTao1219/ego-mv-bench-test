@@ -57,6 +57,12 @@ def compare_feedback(first, second):
     )
 
 
+DEDUP_RULE = """Before answering, compare the current mistake with the previous feedback.
+If the same mistake was already reported and no new mistake occurred,
+answer NO, even if the mistake remains uncorrected.
+Answer YES only for a new, previously unreported mistake."""
+
+
 def repeat_probe(generate):
     scenarios = [
         ('盐量不足', 'Add two teaspoons of salt to the bowl.',
@@ -72,11 +78,13 @@ def repeat_probe(generate):
     results = []
     for name, instruction, observation in scenarios:
         # Each request is independent, just like the project's turn-based calls.
-        # The detailed paper prompt is unchanged; only textual observation is
-        # substituted for images in this text-only diagnostic.
-        def request(label, current_observation, history):
+        # Textual observation substitutes for images in this diagnostic.
+        def request(label, current_observation, history, explicit_dedup=False):
             prompt = prompt_for('mistake', instruction, 0, history)
-            return generate(label, prompt + '\n\nCurrent observation: ' + current_observation)
+            text = prompt + '\n\nCurrent observation: ' + current_observation
+            if explicit_dedup:
+                text += '\n\n' + DEDUP_RULE
+            return generate(label, text)
 
         first_raw = request(name + ' / 首轮', observation, [])
         try:
@@ -93,11 +101,14 @@ def repeat_probe(generate):
             ('完全相同观察', observation),
             ('几乎相同观察', observation + ' No additional action occurred; the state is unchanged.'),
         ]
-        # Both variants use only the first response as history, so the inputs
-        # differ solely in the small observation suffix.
-        for variant, current in variants:
-            raw = request(name + ' / ' + variant, current, history)
-            result = dict(case=name, variant=variant, first_raw=first_raw,
+        # Share the same original first response across all comparisons.
+        # Within each observation pair, only the appended rule changes.
+        comparisons = [(variant, current, policy, enabled)
+                       for variant, current in variants
+                       for policy, enabled in [('original', False), ('explicit_dedup', True)]]
+        for variant, current, policy, enabled in comparisons:
+            raw = request(name + ' / ' + variant + ' / ' + policy, current, history, enabled)
+            result = dict(case=name, variant=variant, prompt_policy=policy, first_raw=first_raw,
                           history_feedback=first['feedback'], second_raw=raw,
                           expected_decision='NO')
             try:
@@ -112,6 +123,15 @@ def repeat_probe(generate):
             print(json.dumps(result, ensure_ascii=False), flush=True)
     print('\n--- REPEAT SUMMARY ---')
     print(json.dumps(results, ensure_ascii=False, indent=2))
+    for policy in ('original', 'explicit_dedup'):
+        rows = [r for r in results if r.get('prompt_policy') == policy]
+        valid = [r for r in rows if r['status'] == 'ok']
+        print(json.dumps(dict(
+            prompt_policy=policy, comparisons=len(rows), valid_responses=len(valid),
+            repeated_triggers=sum(r['repeated_trigger'] for r in valid),
+            exact_text_repeats=sum(r.get('exact_same_text', False) for r in valid),
+            invalid_responses=len(rows) - len(valid),
+        ), ensure_ascii=False))
     return results
 
 
