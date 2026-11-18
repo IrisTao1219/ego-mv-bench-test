@@ -51,6 +51,15 @@
     "Feedback: The person has not yet added the tofu cubes to the pan, but they are now turning on the stove to heat the pan. However, the oil in the pan is not yet hot, and the person has not checked if the pan is hot enough to fry. Adding the cubes before the pan and oil are sufficiently hot will prevent sizzling and could cause the cubes to stick or cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
     "Feedback: The person has turned on the stove and is heating the pan, but they have not yet checked if the pan and oil are hot enough to fry. Adding the tofu cubes before the pan is sufficiently hot will prevent them from sizzling and could cause sticking or uneven cooking. Make sure the pan is hot before adding the cubes.",
     "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
+    "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
+    "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
+    "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
+    "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
+    "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
+    "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
+    "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
+    "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
+    "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes.",
     "Feedback: The person has added the tofu cubes to the pan before the oil is hot enough, as indicated by the lack of sizzling. This will cause the cubes to stick and cook unevenly. Ensure the pan and oil are hot before adding the cubes."
   ],
   "pred_timestamps": [
@@ -104,6 +113,15 @@
     504.358067,
     509.358067,
     514.358067,
-    519.358067
+    519.358067,
+    524.358067,
+    529.358067,
+    534.358067,
+    539.358067,
+    544.358067,
+    549.358067,
+    554.358067,
+    559.358067,
+    564.358067
   ]
 }
