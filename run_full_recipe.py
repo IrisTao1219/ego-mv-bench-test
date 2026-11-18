@@ -11,7 +11,7 @@ from pathlib import Path
 import time
 
 from run_inference import load_samples, save_json, prompt_for, check_response, prediction_event, configure_generation, generation_limits, observed_frame_indices, inference_messages
-from run_inference import DEDUP_RULE
+from run_inference import DEDUP_RULE, continuation_state
 
 
 def instruction_texts(sample):
@@ -53,6 +53,8 @@ def main():
     p.add_argument('--output-dir', type=Path, required=True)
     p.add_argument('--overwrite', action='store_true',
                    help='Allow an existing output directory; replace files produced by this run')
+    p.add_argument('--continue', dest='continue_run', action='store_true',
+                   help='Reuse output directory; rerun the last started video and continue, preserving earlier predictions')
     p.add_argument('--video-ids', nargs='+')
     p.add_argument('--start-video-id', help='Start at this video (inclusive), in annotation order; use --limit 0 for all remaining videos')
     p.add_argument('--limit', type=int, default=1)
@@ -80,12 +82,15 @@ def main():
             or a.max_frames < 0 or a.max_side < 32 or a.limit < 0 or a.max_new_tokens < 0):
         p.error('Invalid sampling parameters')
     samples = load_samples(a.data_root, a.video_ids, a.limit, a.start_video_id)
+    results = []
+    if a.continue_run:
+        samples, results = continuation_state(a.output_dir, samples)
     for s in samples:
         if not instruction_texts(s):
             raise ValueError(f"No instructions: {s['video_id']}")
     import cv2
     from PIL import Image
-    a.output_dir.mkdir(parents=True, exist_ok=a.overwrite)
+    a.output_dir.mkdir(parents=True, exist_ok=a.overwrite or a.continue_run)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(protocol='full_recipe', reference='arXiv:2606.09547v2',
                   prompt_version=('arxiv_2606.09547v2_appendix_D_explicit_dedup_v1'
@@ -122,7 +127,6 @@ def main():
         generation.temperature = generation.top_p = generation.top_k = None
         configure_generation(generation, a.max_new_tokens)
 
-    results = []
     for sample in samples:
         video_id = sample['video_id']
         cap = cv2.VideoCapture(str(a.data_root / 'videos' / f'{video_id}.MP4'))
@@ -158,7 +162,7 @@ def main():
                         image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                         image.thumbnail((a.max_side, a.max_side))
                         frame_path = frame_dir / f'{index:09d}.png'
-                        if a.overwrite or not frame_path.exists():
+                        if a.overwrite or a.continue_run or not frame_path.exists():
                             image.save(frame_path)
                         logged_content += [
                             {'type': 'text', 'text': f'Frame {index/fps:.3f}s'},

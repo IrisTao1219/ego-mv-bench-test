@@ -1,10 +1,28 @@
 import unittest
+import json
+import tempfile
+from pathlib import Path
+from run_inference import continuation_state
 from run_inference import recipe_steps, check_response, prompt_for, prediction_event, inference_messages
 from paper_prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
 from run_inference import DEDUP_RULE
 
 
 class InferenceTests(unittest.TestCase):
+    def test_continue_restarts_partial_video_and_keeps_completed_predictions(self):
+        samples = [{'video_id': value} for value in ('a', 'b', 'c')]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            self.assertEqual(continuation_state(output, samples), (samples, []))
+            previous = [{'video_id': 'a', 'pred_texts': ['kept']}]
+            (output / 'predictions.json').write_text(json.dumps(previous))
+            self.assertEqual(continuation_state(output, samples), (samples, []))
+            (output / 'b.jsonl').touch()
+            self.assertEqual(continuation_state(output, samples), (samples[1:], previous))
+            previous.append({'video_id': 'b', 'pred_texts': ['rerun']})
+            (output / 'predictions.json').write_text(json.dumps(previous))
+            self.assertEqual(continuation_state(output, samples), (samples[1:], previous[:1]))
+
     def test_no_reference_feedback_in_prompt(self):
         sample = {'texts': ['Get a bowl', 'SECRET correction', 'Great', 'Crack eggs'],
                   'text_types': ['Instruction', 'Feedback', 'Success', 'Instruction'],

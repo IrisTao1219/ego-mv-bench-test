@@ -32,7 +32,7 @@ class FakeInputs(dict):
 
 class FullRecipeTests(unittest.TestCase):
     def run_recipe(self, replies, times=None, dry_run=False, interval=0.5, frame_count=21,
-                   dedup_rule=None, per_step=False):
+                   dedup_rule=None, per_step=False, continue_run=False):
         import cv2
         import numpy as np
         with tempfile.TemporaryDirectory() as tmp:
@@ -62,6 +62,13 @@ class FullRecipeTests(unittest.TestCase):
                 AutoModelForImageTextToText=SimpleNamespace(from_pretrained=lambda *args, **kwargs: model))
             torch = SimpleNamespace(__version__='fake', inference_mode=contextlib.nullcontext)
             args = ['run_full_recipe.py', '--data-root', str(root), '--output-dir', str(root/'out'), '--interval', str(interval)]
+            if continue_run:
+                output = root / 'out'
+                output.mkdir()
+                kept = {'video_id': 'earlier', 'pred_texts': ['kept'], 'pred_timestamps': [0]}
+                (output / 'predictions.json').write_text(json.dumps([kept]))
+                (output / 'v.jsonl').write_text('interrupted log\n')
+                args.append('--continue')
             if dry_run:
                 args.append('--dry-run')
             if dedup_rule is not None:
@@ -74,6 +81,9 @@ class FullRecipeTests(unittest.TestCase):
                 else:
                     main()
             result = json.loads((root/'out/predictions.json').read_text())
+            if continue_run:
+                self.assertEqual(result[0], kept)
+                result = result[1:]
             logs = [json.loads(line) for line in (root/'out/v.jsonl').read_text().splitlines()]
             inputs = (root/'out/v.model_inputs.jsonl').read_text()
             if dedup_rule is not None:
@@ -88,6 +98,12 @@ class FullRecipeTests(unittest.TestCase):
             if not dry_run:
                 validate_predictions([sample], result)
             return result[0], logs, inputs
+
+    def test_continue_overwrites_partial_log_and_preserves_previous_predictions(self):
+        result, logs, _ = self.run_recipe(
+            ['YES. First done.', 'YES. Second done.'], continue_run=True)
+        self.assertEqual(result['video_id'], 'v')
+        self.assertEqual(len(logs), 2)
 
     def test_cli_dedup_policy_controls_both_protocols(self):
         from run_inference import DEDUP_RULE

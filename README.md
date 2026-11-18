@@ -114,6 +114,15 @@ CUDA_VISIBLE_DEVICES=1 python run_inference.py \
 
 ### 中断后按视频续跑
 
+`run_inference.py` 和 `run_full_recipe.py` 均支持通过 `--continue` 直接复用原输出目录：
+
+```bash
+python run_inference.py --data-root ../datasets/ego-mc-bench \
+  --output-dir outputs/run1 --continue --limit 0
+```
+
+请保持模型和采样等参数与原实验一致。`--continue` 允许目录已存在，按所选视频的标注顺序找到最后开始的视频（包括只有日志、尚未写入汇总的中断视频），从头覆盖其日志、预测和输入帧，然后继续后续视频；`predictions.json` 保留此前视频的结果。空目录会从头开始。`--limit` 仍限制所选视频范围，全量续跑请设为 `0`。
+
 使用 `--start-video-id` 从指定视频开头重新运行，包含该视频，并按 `annotations.json` 中的顺序继续。添加 `--limit 0` 跑完剩余所有视频；不能与 `--video-ids` 同时使用。模型、采样、思考模式等参数应与原实验一致。
 
 ```bash
@@ -236,7 +245,7 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
   --require-full-coverage
 ```
 
-输出格式与原实验一致：`config.json` 标记 `protocol=full_recipe` 和本地协议选择，`*.jsonl` 保存原始响应与当前 `step_id`，`*.model_inputs.jsonl` 和 `model_input_frames/` 保存模型输入，`predictions.json` 可交给现有官方评测入口。`--dry-run` 的空预测不可用于评测；`--max-seconds` 截断仅用于排错。输出目录默认必须不存在，不要复用已有实验目录；不要对已有实验目录使用 `--overwrite`。
+输出格式与原实验一致：`config.json` 标记 `protocol=full_recipe` 和本地协议选择，`*.jsonl` 保存原始响应与当前 `step_id`，`*.model_inputs.jsonl` 和 `model_input_frames/` 保存模型输入，`predictions.json` 可交给现有官方评测入口。`--dry-run` 的空预测不可用于评测；`--max-seconds` 截断仅用于排错。输出目录默认必须不存在。中断后可在原命令添加 `--continue --limit 0`，覆盖重跑最后开始的视频并继续，同时保留此前视频的汇总预测；模型和采样参数应与原实验一致。
 
 验证：`python -m unittest test_full_recipe test_inference test_evaluate_official`。新增测试用模拟视频和模型运行完整控制循环，检查模型驱动切换、连续时钟与上下文、标注时间戳不影响结果、滞留与格式错误行为，以及官方输出格式兼容性；不代表已运行真实 GPU 推理或复现论文数值。
 
