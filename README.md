@@ -1,8 +1,16 @@
 # Ego-MC-Bench 论文复现
 
+> 2026-11-17 提示词更新：`run_inference.py`（per-recipe-step）和 `run_full_recipe.py` 现在默认在错误检测提示词末尾追加明确去重规则：同一错误已经提醒且没有新错误时，即使尚未纠正也输出 NO；只有新的、尚未报告的错误才输出 YES。完成检测不变，`paper_prompts.py` 仍保留论文原文。新配置记录 `prompt_version=arxiv_2606.09547v2_appendix_D_explicit_dedup_v1`、`paper_prompt_verbatim=false` 和完整 `mistake_dedup_rule`。下文关于逐字使用论文模板的描述对应此前基线。请使用新输出目录运行并与旧结果分开评测；当前证据来自小规模纯文本对照，尚未验证完整视频上的错误召回。诊断脚本的 `original` 分支仍使用原模板，`explicit_dedup` 分支仍只追加一次规则。
+
 本项目使用本地 Qwen3-VL-2B-Instruct，复现论文 *Streaming Interventions: Can Video Large Language Models Correct Mistakes as They Occur?* 中的 per-recipe-step 推理与官方评测流程。当前实现是遵循论文流程的基础模型基线，具体差异见下文。
 
 Python 3.10+，建议 Linux NVIDIA CUDA 服务器。模型默认路径：`/datasets/Hf_model/Qwen3-VL-2B-Instruct`。
+
+### 显式选择反馈去重提示规则
+
+两个推理入口均支持 `--feedback-dedup-rule explicit|paper`，默认 `explicit`。`explicit` 在错误检测提示词末尾追加明确去重决策规则；`paper` 使用原论文错误检测模板。两者共享当前步骤的反馈历史策略和输入打包方式，因此 `paper` 只恢复提示词模板，不是恢复历史版本的完整实验实现。配置自动记录所选参数、提示词版本、原文标识和追加规则（paper 时为 null）。完成检测不受该开关影响。
+
+`scripts/run_qwen_experiments.sh` 的六组命令现均显式指定 `--feedback-dedup-rule explicit`，输出使用 `-explicit-dedup` 后缀，评测路径与推理目录一致。原有两条局部续跑命令已改为全视频运行，以匹配 `--require-full-coverage`。下文旧目录示例对应此前实验；新脚本路径以当前脚本为准。要做 paper 对照，应同时将参数改为 `paper`、推理与评测目录改为独立的 `-paper` 目录。
 
 ## 安装
 

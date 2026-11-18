@@ -70,8 +70,14 @@ def check_response(raw, field):
     return {field: positive, 'feedback': explanation if positive else ''}
 
 
-def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed'):
-    """Fill paper placeholders only; now is logged separately, not added to the prompt."""
+DEDUP_RULE = """Before answering, compare the current mistake with the previous feedback.
+If the same mistake was already reported and no new mistake occurred,
+answer NO, even if the mistake remains uncorrected.
+Answer YES only for a new, previously unreported mistake."""
+
+
+def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed', explicit_dedup=True):
+    """Fill paper placeholders and append the local mistake deduplication rule."""
     if stage == 'completion':
         template = COMPLETION_PROMPT
     elif stage == 'mistake':
@@ -83,8 +89,11 @@ def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed'):
         raise ValueError(f'Unknown stage: {stage}')
     # Only model-generated feedback text belongs in this array, never reference labels.
     feedbacks = [entry['feedback'] for entry in recent]
-    return template.replace('[prev_detected_mistakes]', json.dumps(feedbacks, ensure_ascii=False)).replace(
+    prompt = template.replace('[prev_detected_mistakes]', json.dumps(feedbacks, ensure_ascii=False)).replace(
         '[recipe_step]', instruction)
+    if stage == 'mistake' and explicit_dedup:
+        prompt += '\n\n' + DEDUP_RULE
+    return prompt
 
 
 
@@ -166,6 +175,8 @@ def main():
     p.add_argument('--interval', type=float, default=5, help='Query cadence in seconds; paper turn-based baseline: 5 seconds')
     p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed',
                    help='Appendix D: detailed for Qwen3-VL/Qwen3.5/Gemini; simple for older baselines')
+    p.add_argument('--feedback-dedup-rule', choices=('paper', 'explicit'), default='explicit',
+                   help='paper: original mistake template; explicit: append the local dedup decision rule')
     p.add_argument('--sample-fps', type=float, default=1)
     p.add_argument('--max-frames', type=int, default=32, help='0 = complete observed step prefix; positive = uniform frame cap')
     p.add_argument('--max-side', type=int, default=448, help='Maximum image side; preserve aspect ratio without upscaling')
@@ -193,8 +204,10 @@ def main():
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(feedback_history_policy='complete_current_step_emitted_feedback',
                   protocol='per_recipe_step', reference='arXiv:2606.09547v2',
-                  prompt_version='arxiv_2606.09547v2_appendix_D_verbatim',
-                  paper_prompt_verbatim=True,
+                  prompt_version=('arxiv_2606.09547v2_appendix_D_explicit_dedup_v1'
+                                  if a.feedback_dedup_rule == 'explicit' else 'arxiv_2606.09547v2_appendix_D_verbatim'),
+                  paper_prompt_verbatim=a.feedback_dedup_rule == 'paper',
+                  mistake_dedup_rule=DEDUP_RULE if a.feedback_dedup_rule == 'explicit' else None,
                   input_image_policy='aspect_ratio_thumbnail', output_length_policy='eos_only' if not a.max_new_tokens else 'token_cap',
                   context_frame_limit=a.max_frames or None,
                   success_message_policy='fixed_confirmation_reason_logged_only',
@@ -271,7 +284,8 @@ def main():
                                         {'type': 'image', 'image': image}]
                             event = None
                         for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
-                            prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt)
+                            prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt,
+                                                explicit_dedup=a.feedback_dedup_rule == 'explicit')
                             messages = inference_messages(step['instruction'], content, prompt, recent)
                             input_log.write(json.dumps({
                                 'video_id': video_id, 'step_id': step_id,

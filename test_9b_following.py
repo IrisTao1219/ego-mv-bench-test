@@ -3,7 +3,7 @@ import argparse
 import json
 from difflib import SequenceMatcher
 
-from run_inference import prompt_for, check_response
+from run_inference import prompt_for, check_response, DEDUP_RULE
 
 
 RULE = """You are checking cooking mistakes.
@@ -57,12 +57,6 @@ def compare_feedback(first, second):
     )
 
 
-DEDUP_RULE = """Before answering, compare the current mistake with the previous feedback.
-If the same mistake was already reported and no new mistake occurred,
-answer NO, even if the mistake remains uncorrected.
-Answer YES only for a new, previously unreported mistake."""
-
-
 def repeat_probe(generate):
     scenarios = [
         ('盐量不足', 'Add two teaspoons of salt to the bowl.',
@@ -80,7 +74,7 @@ def repeat_probe(generate):
         # Each request is independent, just like the project's turn-based calls.
         # Textual observation substitutes for images in this diagnostic.
         def request(label, current_observation, history, explicit_dedup=False):
-            prompt = prompt_for('mistake', instruction, 0, history)
+            prompt = prompt_for('mistake', instruction, 0, history, explicit_dedup=False)
             text = prompt + '\n\nCurrent observation: ' + current_observation
             if explicit_dedup:
                 text += '\n\n' + DEDUP_RULE

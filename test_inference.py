@@ -1,6 +1,7 @@
 import unittest
 from run_inference import recipe_steps, check_response, prompt_for, prediction_event, inference_messages
 from paper_prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
+from run_inference import DEDUP_RULE
 
 
 class InferenceTests(unittest.TestCase):
@@ -49,9 +50,10 @@ class InferenceTests(unittest.TestCase):
         recent = [{'time': 40, 'feedback': 'Add one more spoonful.'}]
         expected = DETAILED_MISTAKE_PROMPT.replace('[recipe_step]', 'Add oil').replace(
             '[prev_detected_mistakes]', '["Add one more spoonful."]')
-        self.assertEqual(prompt_for('mistake', 'Add oil', 42, recent), expected)
+        self.assertEqual(prompt_for('mistake', 'Add oil', 42, recent), expected + '\n\n' + DEDUP_RULE)
+        self.assertEqual(prompt_for('mistake', 'Add oil', 42, recent, explicit_dedup=False), expected)
         self.assertEqual(prompt_for('mistake', 'Add oil', 42, recent, 'simple'),
-                         SIMPLE_MISTAKE_PROMPT.replace('[recipe_step]', 'Add oil'))
+                         SIMPLE_MISTAKE_PROMPT.replace('[recipe_step]', 'Add oil') + '\n\n' + DEDUP_RULE)
         self.assertNotIn('Video observation time', expected)
 
     def test_completion_reason_is_logged_not_displayed(self):

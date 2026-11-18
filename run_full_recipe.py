@@ -11,6 +11,7 @@ from pathlib import Path
 import time
 
 from run_inference import load_samples, save_json, prompt_for, check_response, prediction_event, configure_generation, generation_limits, observed_frame_indices, inference_messages
+from run_inference import DEDUP_RULE
 
 
 def instruction_texts(sample):
@@ -59,6 +60,8 @@ def main():
     p.add_argument('--interval', type=float, default=5, help='Query cadence in seconds; paper turn-based baseline: 5 seconds')
     p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed',
                    help='Appendix D: detailed for Qwen3-VL/Qwen3.5/Gemini; simple for older baselines')
+    p.add_argument('--feedback-dedup-rule', choices=('paper', 'explicit'), default='explicit',
+                   help='paper: original mistake template; explicit: append the local dedup decision rule')
     p.add_argument('--sample-fps', type=float, default=1)
     p.add_argument('--max-frames', type=int, default=32, help='0 = complete observed step prefix; positive = uniform frame cap')
     p.add_argument('--max-side', type=int, default=448, help='Maximum image side; preserve aspect ratio without upscaling')
@@ -85,8 +88,10 @@ def main():
     a.output_dir.mkdir(parents=True, exist_ok=a.overwrite)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(protocol='full_recipe', reference='arXiv:2606.09547v2',
-                  prompt_version='arxiv_2606.09547v2_appendix_D_verbatim',
-                  paper_prompt_verbatim=True,
+                  prompt_version=('arxiv_2606.09547v2_appendix_D_explicit_dedup_v1'
+                                  if a.feedback_dedup_rule == 'explicit' else 'arxiv_2606.09547v2_appendix_D_verbatim'),
+                  paper_prompt_verbatim=a.feedback_dedup_rule == 'paper',
+                  mistake_dedup_rule=DEDUP_RULE if a.feedback_dedup_rule == 'explicit' else None,
                   input_image_policy='aspect_ratio_thumbnail', output_length_policy='eos_only' if not a.max_new_tokens else 'token_cap',
                   context_frame_limit=a.max_frames or None,
                   success_message_policy='fixed_confirmation_reason_logged_only',
@@ -164,7 +169,8 @@ def main():
                                     {'type': 'image', 'image': image}]
                     event = None
                     for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
-                        prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt)
+                        prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt,
+                                            explicit_dedup=a.feedback_dedup_rule == 'explicit')
                         messages = inference_messages(step['instruction'], content, prompt, recent)
                         input_log.write(json.dumps({
                             'video_id': video_id, 'step_id': step_id,

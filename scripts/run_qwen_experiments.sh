@@ -11,12 +11,13 @@ CUDA_VISIBLE_DEVICES=1 python run_inference.py \
   --max-frames 32 \
   --max-new-tokens 0 \
   --mistake-prompt detailed \
+  --feedback-dedup-rule explicit \
   --thinking default \
-  --output-dir outputs/qwen3-vl-30b-per-step &&
+  --output-dir outputs/qwen3-vl-30b-per-step-explicit-dedup &&
 CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
-  --predictions outputs/qwen3-vl-30b-per-step/predictions.json \
-  --report outputs/qwen3-vl-30b-per-step/official-report.txt \
+  --predictions outputs/qwen3-vl-30b-per-step-explicit-dedup/predictions.json \
+  --report outputs/qwen3-vl-30b-per-step-explicit-dedup/official-report.txt \
   --require-full-coverage
 
 CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
@@ -30,12 +31,13 @@ CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
   --max-frames 32 \
   --max-new-tokens 0 \
   --mistake-prompt detailed \
+  --feedback-dedup-rule explicit \
   --thinking default \
-  --output-dir outputs/qwen3-vl-30b-full-recipe-continue --start-video-id GX010050 &&
+  --output-dir outputs/qwen3-vl-30b-full-recipe-explicit-dedup &&
 CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
-  --predictions outputs/qwen3-vl-30b-full-recipe/predictions.json \
-  --report outputs/qwen3-vl-30b-full-recipe/official-report.txt \
+  --predictions outputs/qwen3-vl-30b-full-recipe-explicit-dedup/predictions.json \
+  --report outputs/qwen3-vl-30b-full-recipe-explicit-dedup/official-report.txt \
   --require-full-coverage
 
 CUDA_VISIBLE_DEVICES=2 python run_inference.py \
@@ -49,12 +51,13 @@ CUDA_VISIBLE_DEVICES=2 python run_inference.py \
   --max-frames 32 \
   --max-new-tokens 0 \
   --mistake-prompt detailed \
+  --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-27b-per-step &&
+  --output-dir outputs/qwen3.5-27b-per-step-explicit-dedup &&
 CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
-  --predictions outputs/qwen3.5-27b-per-step/predictions.json \
-  --report outputs/qwen3.5-27b-per-step/official-report.txt \
+  --predictions outputs/qwen3.5-27b-per-step-explicit-dedup/predictions.json \
+  --report outputs/qwen3.5-27b-per-step-explicit-dedup/official-report.txt \
   --require-full-coverage
 
 CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
@@ -68,12 +71,13 @@ CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
   --max-frames 32 \
   --max-new-tokens 0 \
   --mistake-prompt detailed \
+  --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-27b-continue --overwrite --start-video-id GX010040 &&
+  --output-dir outputs/qwen3.5-27b-full-recipe-explicit-dedup &&
 CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
-  --predictions outputs/qwen3.5-27b-full-recipe/predictions.json \
-  --report outputs/qwen3.5-27b-full-recipe/official-report.txt \
+  --predictions outputs/qwen3.5-27b-full-recipe-explicit-dedup/predictions.json \
+  --report outputs/qwen3.5-27b-full-recipe-explicit-dedup/official-report.txt \
   --require-full-coverage
 
 CUDA_VISIBLE_DEVICES=2 python run_inference.py \
@@ -87,12 +91,13 @@ CUDA_VISIBLE_DEVICES=2 python run_inference.py \
   --max-frames 32 \
   --max-new-tokens 0 \
   --mistake-prompt detailed \
+  --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-9b-new &&
+  --output-dir outputs/qwen3.5-9b-per-step-explicit-dedup &&
 CUDA_VISIBLE_DEVICES=2 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
-  --predictions outputs/qwen3.5-9b-new/predictions.json \
-  --report outputs/qwen3.5-9b-new/official-report.txt \
+  --predictions outputs/qwen3.5-9b-per-step-explicit-dedup/predictions.json \
+  --report outputs/qwen3.5-9b-per-step-explicit-dedup/official-report.txt \
   --require-full-coverage
 
 CUDA_VISIBLE_DEVICES=2 python run_full_recipe.py \
@@ -106,11 +111,12 @@ CUDA_VISIBLE_DEVICES=2 python run_full_recipe.py \
   --max-frames 32 \
   --max-new-tokens 0 \
   --mistake-prompt detailed \
+  --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-9b-full-recipe-new &&
+  --output-dir outputs/qwen3.5-9b-full-recipe-explicit-dedup &&
 CUDA_VISIBLE_DEVICES=2 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
-  --predictions outputs/qwen3.5-9b-full-recipe-new/predictions.json \
-  --report outputs/qwen3.5-9b-full-recipe-new/official-report.txt \
+  --predictions outputs/qwen3.5-9b-full-recipe-explicit-dedup/predictions.json \
+  --report outputs/qwen3.5-9b-full-recipe-explicit-dedup/official-report.txt \
   --require-full-coverage
 

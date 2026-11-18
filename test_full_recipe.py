@@ -31,7 +31,8 @@ class FakeInputs(dict):
 
 
 class FullRecipeTests(unittest.TestCase):
-    def run_recipe(self, replies, times=None, dry_run=False, interval=0.5, frame_count=21):
+    def run_recipe(self, replies, times=None, dry_run=False, interval=0.5, frame_count=21,
+                   dedup_rule=None, per_step=False):
         import cv2
         import numpy as np
         with tempfile.TemporaryDirectory() as tmp:
@@ -63,15 +64,46 @@ class FullRecipeTests(unittest.TestCase):
             args = ['run_full_recipe.py', '--data-root', str(root), '--output-dir', str(root/'out'), '--interval', str(interval)]
             if dry_run:
                 args.append('--dry-run')
+            if dedup_rule is not None:
+                args.extend(['--feedback-dedup-rule', dedup_rule])
             with patch.object(sys, 'argv', args), patch.dict(sys.modules, transformers=transformers, torch=torch), \
                  patch.object(cv2, 'VideoCapture', return_value=cap), contextlib.redirect_stdout(io.StringIO()):
-                main()
+                if per_step:
+                    from run_inference import main as per_step_main
+                    per_step_main()
+                else:
+                    main()
             result = json.loads((root/'out/predictions.json').read_text())
             logs = [json.loads(line) for line in (root/'out/v.jsonl').read_text().splitlines()]
             inputs = (root/'out/v.model_inputs.jsonl').read_text()
+            if dedup_rule is not None:
+                config = json.loads((root/'out/config.json').read_text())
+                self.assertEqual(config['feedback_dedup_rule'], dedup_rule)
+                self.assertEqual(config['paper_prompt_verbatim'], dedup_rule == 'paper')
+                from run_inference import DEDUP_RULE
+                self.assertEqual(config['mistake_dedup_rule'],
+                                 DEDUP_RULE if dedup_rule == 'explicit' else None)
+                self.assertEqual(config['prompt_version'], 'arxiv_2606.09547v2_appendix_D_' +
+                                 ('explicit_dedup_v1' if dedup_rule == 'explicit' else 'verbatim'))
             if not dry_run:
                 validate_predictions([sample], result)
             return result[0], logs, inputs
+
+    def test_cli_dedup_policy_controls_both_protocols(self):
+        from run_inference import DEDUP_RULE
+        for per_step in (False, True):
+            for policy in ('paper', 'explicit'):
+                with self.subTest(per_step=per_step, policy=policy):
+                    _, logs, inputs = self.run_recipe(
+                        [], times=[0, 1, 2], dry_run=True, interval=1, frame_count=4,
+                        dedup_rule=policy, per_step=per_step)
+                    for row in logs:
+                        self.assertEqual(DEDUP_RULE in row['prompt'],
+                                         row['stage'] == 'mistake' and policy == 'explicit')
+                    rows = [json.loads(line) for line in inputs.splitlines()]
+                    self.assertEqual(len(rows), len(logs))
+                    for row, log in zip(rows, logs):
+                        self.assertEqual(row['messages'][-1]['content'][-1]['text'], log['prompt'])
 
     def test_model_completion_drives_continuous_transitions(self):
         result, logs, inputs = self.run_recipe(['YES. Done first.', 'NO',
