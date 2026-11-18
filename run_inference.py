@@ -114,20 +114,9 @@ def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed', expli
 
 
 
-def inference_messages(instruction, content, prompt, history):
-    """Expose all emitted feedback this step to both decision stages.
-
-    Keep the existing task prompts. Assistant history also works for the simple
-    mistake prompt, which has no previous-feedback placeholder.
-    """
-    messages = []
-    if history:
-        messages = [
-            {'role': 'user', 'content': 'Current instruction: ' + instruction},
-            {'role': 'assistant', 'content': '\n'.join(
-                'Feedback: ' + entry['feedback'] for entry in history)},
-        ]
-    return messages + [{'role': 'user', 'content': content + [{'type': 'text', 'text': prompt}]}]
+def inference_messages(content, prompt):
+    """Pack frames and task text into one user message."""
+    return [{'role': 'user', 'content': content + [{'type': 'text', 'text': prompt}]}]
 
 
 def prediction_event(parsed, field):
@@ -225,6 +214,8 @@ def main():
     a.output_dir.mkdir(parents=True, exist_ok=a.overwrite or a.continue_run)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(feedback_history_policy='complete_current_step_emitted_feedback',
+                  message_structure='single_user',
+                  feedback_input_policy='detailed_mistake_prompt_array_only',
                   protocol='per_recipe_step', reference='arXiv:2606.09547v2',
                   prompt_version=('arxiv_2606.09547v2_appendix_D_explicit_dedup_v1'
                                   if a.feedback_dedup_rule == 'explicit' else 'arxiv_2606.09547v2_appendix_D_verbatim'),
@@ -307,11 +298,11 @@ def main():
                         for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
                             prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt,
                                                 explicit_dedup=a.feedback_dedup_rule == 'explicit')
-                            messages = inference_messages(step['instruction'], content, prompt, recent)
+                            messages = inference_messages(content, prompt)
                             input_log.write(json.dumps({
                                 'video_id': video_id, 'step_id': step_id,
                                 'timestamp': requested, 'stage': stage,
-                                'messages': inference_messages(step['instruction'], logged_content, prompt, recent),
+                                'messages': inference_messages(logged_content, prompt),
                             }, ensure_ascii=False) + '\n')
                             input_log.flush()
                             raw, error, parsed = '', None, None

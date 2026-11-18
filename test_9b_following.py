@@ -4,7 +4,7 @@ import json
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from run_inference import prompt_for, check_response, DEDUP_RULE, inference_messages, save_json
+from run_inference import prompt_for, check_response, DEDUP_RULE, save_json
 
 
 RULE = """You are checking cooking mistakes.
@@ -58,16 +58,13 @@ def compare_feedback(first, second):
     )
 
 
-def repeat_summaries(results, factorial=False):
+def repeat_summaries(results):
     summaries = []
-    groups = [(policy, structure) for policy in ('original', 'explicit_dedup')
-              for structure in (['single_user', 'assistant_history'] if factorial else ['single_user'])]
-    for policy, structure in groups:
-        rows = [r for r in results if r.get('prompt_policy') == policy
-                and r.get('message_structure') == structure]
+    for policy in ('original', 'explicit_dedup'):
+        rows = [r for r in results if r.get('prompt_policy') == policy]
         valid = [r for r in rows if r['status'] == 'ok']
         summaries.append(dict(
-            prompt_policy=policy, message_structure=structure,
+            prompt_policy=policy,
             comparisons=len(rows), valid_responses=len(valid),
             repeated_triggers=sum(r['repeated_trigger'] for r in valid),
             exact_text_repeats=sum(r.get('exact_same_text', False) for r in valid
@@ -81,7 +78,7 @@ def repeat_summaries(results, factorial=False):
     return summaries
 
 
-def repeat_probe(generate, factorial=False):
+def repeat_probe(generate):
     scenarios = [
         ('盐量不足', 'Add two teaspoons of salt to the bowl.',
          'The person added one teaspoon of salt to the bowl, put the spoon away, '
@@ -97,16 +94,11 @@ def repeat_probe(generate, factorial=False):
     for name, instruction, observation in scenarios:
         # Each request is independent, just like the project's turn-based calls.
         # Textual observation substitutes for images in this diagnostic.
-        def request(label, current_observation, history, explicit_dedup=False,
-                    assistant_history=False):
+        def request(label, current_observation, history, explicit_dedup=False):
             prompt = prompt_for('mistake', instruction, 0, history, explicit_dedup=False)
             text = prompt + '\n\nCurrent observation: ' + current_observation
             if explicit_dedup:
                 text += '\n\n' + DEDUP_RULE
-            if assistant_history:
-                # Use exactly the production helper, including the initial
-                # instruction user message and aggregated assistant feedback.
-                return generate(label, inference_messages(instruction, [], text, history))
             return generate(label, text)
 
         first_raw = request(name + ' / 首轮', observation, [])
@@ -124,23 +116,18 @@ def repeat_probe(generate, factorial=False):
             ('完全相同观察', observation, 'NO'),
             ('几乎相同观察', observation + ' No additional action occurred; the state is unchanged.', 'NO'),
         ]
-        if factorial:
-            variants.append(('纠正后新一次执行又犯错',
+        variants.append(('纠正后新一次执行又犯错',
                 'The previously reported incident was fully corrected. The person '
                 'then started a NEW, SEPARATE execution of the same instruction. '
                 'In this new execution: ' + observation, 'YES'))
         # Share the same original first response across all comparisons.
         # Within each observation pair, only the appended rule changes.
-        comparisons = [(variant, current, expected, policy, enabled, use_history)
+        comparisons = [(variant, current, expected, policy, enabled)
                        for variant, current, expected in variants
-                       for policy, enabled in [('original', False), ('explicit_dedup', True)]
-                       for use_history in ([False, True] if factorial else [False])]
-        for variant, current, expected, policy, enabled, use_history in comparisons:
-            structure = 'assistant_history' if use_history else 'single_user'
-            raw = request(name + ' / ' + variant + ' / ' + policy + ' / ' + structure,
-                          current, history, enabled, use_history)
-            result = dict(case=name, variant=variant, prompt_policy=policy,
-                          message_structure=structure, first_raw=first_raw,
+                       for policy, enabled in [('original', False), ('explicit_dedup', True)]]
+        for variant, current, expected, policy, enabled in comparisons:
+            raw = request(name + ' / ' + variant + ' / ' + policy, current, history, enabled)
+            result = dict(case=name, variant=variant, prompt_policy=policy, first_raw=first_raw,
                           history_feedback=first['feedback'], second_raw=raw,
                           expected_decision=expected)
             try:
@@ -157,7 +144,7 @@ def repeat_probe(generate, factorial=False):
             print(json.dumps(result, ensure_ascii=False), flush=True)
     print('\n--- REPEAT SUMMARY ---')
     print(json.dumps(results, ensure_ascii=False, indent=2))
-    for summary in repeat_summaries(results, factorial):
+    for summary in repeat_summaries(results):
         print(json.dumps(summary, ensure_ascii=False))
     return results
 
@@ -168,8 +155,8 @@ def main():
     parser.add_argument('--device-map', default='cuda:0')
     parser.add_argument('--output', type=Path,
                         help='Save inputs, responses, results and summaries as JSON (must be a new file)')
-    parser.add_argument('--mode', choices=('decision', 'repeat', 'factorial'), default='decision',
-                        help='decision: YES/NO; repeat: rule comparison; factorial: rule x assistant history with new-incident controls')
+    parser.add_argument('--mode', choices=('decision', 'repeat'), default='decision',
+                        help='decision: YES/NO; repeat: rule comparison with new-incident controls')
     args = parser.parse_args()
     if args.output is not None:
         if args.output.exists():
@@ -203,8 +190,7 @@ def main():
     ).eval()
 
     def generate(name, prompt):
-        messages = (prompt if isinstance(prompt, list) else
-                    [{'role': 'user', 'content': [{'type': 'text', 'text': prompt}]}])
+        messages = [{'role': 'user', 'content': [{'type': 'text', 'text': prompt}]}]
         rendered = processor.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True, enable_thinking=False,
         )
@@ -226,9 +212,9 @@ def main():
         checkpoint()
         return raw
 
-    if args.mode in ('repeat', 'factorial'):
-        results = repeat_probe(generate, factorial=args.mode == 'factorial')
-        finish(results, repeat_summaries(results, factorial=args.mode == 'factorial'))
+    if args.mode == 'repeat':
+        results = repeat_probe(generate)
+        finish(results, repeat_summaries(results))
         return
 
     results = []

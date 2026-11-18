@@ -12,7 +12,7 @@ CUDA_VISIBLE_DEVICES=1 python run_inference.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking default \
-  --output-dir outputs/qwen3-vl-30b-per-step-dedup --continue &&
+  --output-dir outputs/qwen3-vl-30b-per-step-dedup-single-user &&
 
 
 CUDA_VISIBLE_DEVICES=2 python run_inference.py \
@@ -27,7 +27,7 @@ CUDA_VISIBLE_DEVICES=2 python run_inference.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-27b-per-step-dedup &&
+  --output-dir outputs/qwen3.5-27b-per-step-dedup-single-user &&
 
 
 CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
@@ -42,7 +42,7 @@ CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking default \
-  --output-dir outputs/qwen3-vl-30b-full-recipe-dedup &&
+  --output-dir outputs/qwen3-vl-30b-full-recipe-dedup-single-user &&
 
 
 CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
@@ -57,7 +57,7 @@ CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-27b-full-recipe-dedup &&
+  --output-dir outputs/qwen3.5-27b-full-recipe-dedup-single-user &&
 
 
 CUDA_VISIBLE_DEVICES=3 python run_inference.py \
@@ -72,7 +72,7 @@ CUDA_VISIBLE_DEVICES=3 python run_inference.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-9b-per-step-dedup &&
+  --output-dir outputs/qwen3.5-9b-per-step-dedup-single-user &&
 
 CUDA_VISIBLE_DEVICES=2 python run_full_recipe.py \
   --data-root ../datasets/ego-mc-bench \
@@ -86,7 +86,7 @@ CUDA_VISIBLE_DEVICES=2 python run_full_recipe.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-9b-full-recipe-dedup &&
+  --output-dir outputs/qwen3.5-9b-full-recipe-dedup-single-user &&
 
 
 python scripts/wait_for_gpu.py \
@@ -104,5 +104,5 @@ python scripts/wait_for_gpu.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-27b-per-step-dedup
+  --output-dir outputs/qwen3.5-27b-per-step-dedup-single-user
 
