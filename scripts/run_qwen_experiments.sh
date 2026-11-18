@@ -12,7 +12,7 @@ CUDA_VISIBLE_DEVICES=1 python run_inference.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking default \
-  --output-dir outputs/qwen3-vl-30b-per-step-dedup &&
+  --output-dir qwen3-vl-30b-per-step-explicit-dedup --continue &&
 
 
 CUDA_VISIBLE_DEVICES=2 python run_inference.py \

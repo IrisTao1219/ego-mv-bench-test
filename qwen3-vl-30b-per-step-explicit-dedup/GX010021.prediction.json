@@ -1,0 +1,31 @@
+{
+  "video_id": "GX010021",
+  "pred_texts": [
+    "Instruct: Let's first preheat the oven to 350 degrees Fahrenheit.",
+    "Success: Step complete.",
+    "Instruct: Get a bowl to mix the wet ingredients.",
+    "Success: Step complete.",
+    "Instruct: Now crack two eggs and add them to the bowl.",
+    "Feedback: You are cracking the eggs into a container that is not a bowl, which deviates from the instruction to add them to a bowl.",
+    "Feedback: You are cracking the eggs into a plastic container instead of a bowl, which deviates from the instruction to add them to a bowl.",
+    "Instruct: Now add half a cup of sugar to the bowl.",
+    "Feedback: You are using a measuring cup that is not appropriate for dry ingredients like sugar. A measuring cup designed for liquids may not provide an accurate measurement for dry ingredients, leading to an incorrect amount of sugar being added. Use a dry measuring cup for better accuracy.",
+    "Feedback: You are using a liquid measuring cup to measure sugar, which is not appropriate for dry ingredients and may lead to inaccurate measurements. Use a dry measuring cup for better accuracy.",
+    "Instruct: Now add half cup of milk and whisk the mixture.",
+    "Feedback: You are about to pour milk into the mixture, but you have not yet measured the correct amount of milk. The recipe requires half a cup of milk, and you need to ensure you measure it accurately before adding it to avoid a measurement error."
+  ],
+  "pred_timestamps": [
+    4.418,
+    14.418,
+    17.0,
+    27.0,
+    36.658,
+    66.658,
+    71.658,
+    89.108,
+    104.108,
+    109.108,
+    134.748,
+    149.748
+  ]
+}
