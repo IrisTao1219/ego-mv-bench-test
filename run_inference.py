@@ -114,6 +114,20 @@ def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed', expli
 
 
 
+def feedback_context(history, now):
+    """Keep feedback emitted in the last 60 video seconds, once per exact text.
+
+    Retain the latest occurrence so a repeated reminder refreshes its lifetime.
+    """
+    seen = set()
+    kept = []
+    for entry in reversed(history):
+        if 0 <= now - entry['time'] <= 60 and entry['feedback'] not in seen:
+            seen.add(entry['feedback'])
+            kept.append(entry)
+    return list(reversed(kept))
+
+
 def inference_messages(content, prompt, instruction=None, recent=()):
     """Provide current-step feedback as assistant history before the visual query."""
     messages = []
@@ -219,7 +233,8 @@ def main():
     from PIL import Image
     a.output_dir.mkdir(parents=True, exist_ok=a.overwrite or a.continue_run)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
-    config.update(feedback_history_policy='complete_current_step_emitted_feedback',
+    config.update(feedback_history_policy='current_step_last_60s_exact_text_dedup_latest',
+                  feedback_history_window_seconds=60,
                   message_structure='user_assistant_user_with_feedback_history',
                   feedback_input_policy='assistant_history_both_stages_and_detailed_mistake_prompt_array',
                   protocol='per_recipe_step', reference='arXiv:2606.09547v2',
@@ -301,6 +316,7 @@ def main():
                             content += [{'type': 'text', 'text': f'Frame {index/fps:.3f}s'},
                                         {'type': 'image', 'image': image}]
                             event = None
+                        recent = feedback_context(recent, requested)
                         for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
                             prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt,
                                                 explicit_dedup=a.feedback_dedup_rule == 'explicit')

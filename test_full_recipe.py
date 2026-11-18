@@ -134,17 +134,17 @@ class FullRecipeTests(unittest.TestCase):
         self.assertEqual(result, self.run_recipe(
             ['YES. Done first.', 'NO', 'YES. Fix it.', 'YES. Done second.'], [0, 1, 2])[0])
 
-    def test_feedback_survives_sixty_seconds_and_resets_on_transition(self):
+    def test_feedback_expires_after_sixty_seconds_and_resets_on_transition(self):
         _, _, inputs = self.run_recipe(
             ['NO', 'YES. Add more salt.', 'NO', 'NO', 'YES. First done.', 'YES. Second done.'],
             interval=65, frame_count=301)
         rows = [json.loads(line) for line in inputs.splitlines()]
         self.assertEqual([m['role'] for m in rows[0]['messages']], ['user'])
         later = next(row for row in rows if row['timestamp'] == 130 and row['stage'] == 'mistake')
-        self.assertIn('Add more salt.', later['messages'][-1]['content'][-1]['text'])
+        self.assertNotIn('Add more salt.', json.dumps(later['messages']))
         completion = next(row for row in rows if row['timestamp'] == 130 and row['stage'] == 'completion')
-        self.assertEqual([m['role'] for m in completion['messages']], ['user', 'assistant', 'user'])
-        self.assertIn('Add more salt.', completion['messages'][1]['content'])
+        self.assertEqual([m['role'] for m in completion['messages']], ['user'])
+        self.assertNotIn('Add more salt.', json.dumps(completion['messages']))
         next_step = next(row for row in rows if row['timestamp'] == 260)
         self.assertEqual(len(next_step['messages']), 1)
         self.assertNotIn('Add more salt.', json.dumps(next_step))

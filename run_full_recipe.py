@@ -10,7 +10,7 @@ import math
 from pathlib import Path
 import time
 
-from run_inference import load_samples, save_json, prompt_for, check_response, prediction_event, configure_generation, generation_limits, observed_frame_indices, inference_messages
+from run_inference import load_samples, save_json, prompt_for, check_response, prediction_event, configure_generation, generation_limits, observed_frame_indices, inference_messages, feedback_context
 from run_inference import DEDUP_RULE, continuation_state
 
 
@@ -108,7 +108,8 @@ def main():
                   implementation='local_full_recipe_state_machine',
                   instruction_timestamps_used=False, video_start_seconds=0,
                   transition_policy='model_success_only', context_policy='observed_current_step_prefix',
-                  feedback_history_policy='complete_current_step_emitted_feedback',
+                  feedback_history_policy='current_step_last_60s_exact_text_dedup_latest',
+                  feedback_history_window_seconds=60,
                   dry_run_policy='no_model_no_transitions_no_predictions')
     save_json(a.output_dir / 'config.json', config)
     if not a.dry_run:
@@ -174,6 +175,7 @@ def main():
                         content += [{'type': 'text', 'text': f'Frame {index/fps:.3f}s'},
                                     {'type': 'image', 'image': image}]
                     event = None
+                    recent = feedback_context(recent, requested)
                     for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
                         prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt,
                                             explicit_dedup=a.feedback_dedup_rule == 'explicit')

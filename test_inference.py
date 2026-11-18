@@ -5,7 +5,7 @@ from pathlib import Path
 from run_inference import continuation_state
 from run_inference import recipe_steps, check_response, prompt_for, prediction_event, inference_messages
 from paper_prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
-from run_inference import DEDUP_RULE
+from run_inference import DEDUP_RULE, feedback_context
 
 
 class InferenceTests(unittest.TestCase):
@@ -50,6 +50,17 @@ class InferenceTests(unittest.TestCase):
                     self.assertEqual(entry['feedback'] in prompt,
                                      stage == 'mistake' and variant == 'detailed')
         self.assertEqual(len(inference_messages([], 'Prompt')), 1)
+
+    def test_feedback_window_and_exact_dedup(self):
+        history = [{'time': 1, 'feedback': 'expired'},
+                   {'time': 40, 'feedback': 'boundary'},
+                   {'time': 50, 'feedback': 'same'},
+                   {'time': 70, 'feedback': 'other'},
+                   {'time': 90, 'feedback': 'same'},
+                   {'time': 100, 'feedback': 'Same'}]
+        self.assertEqual(feedback_context(history, 100),
+                         [history[1], history[3], history[4], history[5]])
+        self.assertEqual(feedback_context(history, 161), [])
 
     def test_paper_responses(self):
         for field in ('completed', 'mistake'):
