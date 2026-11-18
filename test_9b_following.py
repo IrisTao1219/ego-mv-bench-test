@@ -2,8 +2,9 @@
 import argparse
 import json
 from difflib import SequenceMatcher
+from pathlib import Path
 
-from run_inference import prompt_for, check_response, DEDUP_RULE, inference_messages
+from run_inference import prompt_for, check_response, DEDUP_RULE, inference_messages, save_json
 
 
 RULE = """You are checking cooking mistakes.
@@ -55,6 +56,29 @@ def compare_feedback(first, second):
         same_ignoring_case_whitespace=normalize(first) == normalize(second),
         text_similarity=round(SequenceMatcher(None, normalize(first), normalize(second)).ratio(), 3),
     )
+
+
+def repeat_summaries(results, factorial=False):
+    summaries = []
+    groups = [(policy, structure) for policy in ('original', 'explicit_dedup')
+              for structure in (['single_user', 'assistant_history'] if factorial else ['single_user'])]
+    for policy, structure in groups:
+        rows = [r for r in results if r.get('prompt_policy') == policy
+                and r.get('message_structure') == structure]
+        valid = [r for r in rows if r['status'] == 'ok']
+        summaries.append(dict(
+            prompt_policy=policy, message_structure=structure,
+            comparisons=len(rows), valid_responses=len(valid),
+            repeated_triggers=sum(r['repeated_trigger'] for r in valid),
+            exact_text_repeats=sum(r.get('exact_same_text', False) for r in valid
+                                   if r['expected_decision'] == 'NO'),
+            repeat_test_count=sum(r['expected_decision'] == 'NO' for r in rows),
+            new_incident_controls=sum(r['expected_decision'] == 'YES' for r in rows),
+            new_incident_detected=sum(r['detected_mistake'] for r in valid
+                                      if r['expected_decision'] == 'YES'),
+            invalid_responses=len(rows) - len(valid),
+        ))
+    return summaries
 
 
 def repeat_probe(generate, factorial=False):
@@ -133,24 +157,8 @@ def repeat_probe(generate, factorial=False):
             print(json.dumps(result, ensure_ascii=False), flush=True)
     print('\n--- REPEAT SUMMARY ---')
     print(json.dumps(results, ensure_ascii=False, indent=2))
-    groups = [(policy, structure) for policy in ('original', 'explicit_dedup')
-              for structure in (['single_user', 'assistant_history'] if factorial else ['single_user'])]
-    for policy, structure in groups:
-        rows = [r for r in results if r.get('prompt_policy') == policy
-                and r.get('message_structure') == structure]
-        valid = [r for r in rows if r['status'] == 'ok']
-        print(json.dumps(dict(
-            prompt_policy=policy, message_structure=structure,
-            comparisons=len(rows), valid_responses=len(valid),
-            repeated_triggers=sum(r['repeated_trigger'] for r in valid),
-            exact_text_repeats=sum(r.get('exact_same_text', False) for r in valid
-                                   if r['expected_decision'] == 'NO'),
-            repeat_test_count=sum(r['expected_decision'] == 'NO' for r in rows),
-            new_incident_controls=sum(r['expected_decision'] == 'YES' for r in rows),
-            new_incident_detected=sum(r['detected_mistake'] for r in valid
-                                      if r['expected_decision'] == 'YES'),
-            invalid_responses=len(rows) - len(valid),
-        ), ensure_ascii=False))
+    for summary in repeat_summaries(results, factorial):
+        print(json.dumps(summary, ensure_ascii=False))
     return results
 
 
@@ -158,9 +166,32 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model-path', required=True)
     parser.add_argument('--device-map', default='cuda:0')
+    parser.add_argument('--output', type=Path,
+                        help='Save inputs, responses, results and summaries as JSON (must be a new file)')
     parser.add_argument('--mode', choices=('decision', 'repeat', 'factorial'), default='decision',
                         help='decision: YES/NO; repeat: rule comparison; factorial: rule x assistant history with new-incident controls')
     args = parser.parse_args()
+    if args.output is not None:
+        if args.output.exists():
+            parser.error('--output already exists; choose a new file')
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+
+    record = dict(status='running', config=dict(
+        model_path=args.model_path, device_map=args.device_map, mode=args.mode,
+        enable_thinking=False, do_sample=False, max_new_tokens=256,
+        dedup_rule=DEDUP_RULE), calls=[], results=[], summaries=[])
+
+    def checkpoint():
+        if args.output is not None:
+            save_json(args.output, record)
+
+    def finish(results, summaries):
+        record.update(status='complete', results=results, summaries=summaries)
+        checkpoint()
+        if args.output is not None:
+            print(f'Output: {args.output.resolve()}')
+
+    checkpoint()
 
     import torch
     from transformers import AutoModelForImageTextToText, AutoProcessor
@@ -188,10 +219,16 @@ def main():
             output[:, inputs.input_ids.shape[1]:], skip_special_tokens=True,
         )[0].strip()
         print('RESPONSE: ' + raw, flush=True)
+        record['calls'].append(dict(case=name, messages=messages,
+                                    rendered_input=rendered, raw_response=raw,
+                                    input_tokens=inputs.input_ids.shape[1],
+                                    generated_tokens=output.shape[1] - inputs.input_ids.shape[1]))
+        checkpoint()
         return raw
 
     if args.mode in ('repeat', 'factorial'):
-        repeat_probe(generate, factorial=args.mode == 'factorial')
+        results = repeat_probe(generate, factorial=args.mode == 'factorial')
+        finish(results, repeat_summaries(results, factorial=args.mode == 'factorial'))
         return
 
     results = []
@@ -208,6 +245,7 @@ def main():
         print(f"{result['case']}: expected={result['expected']} "
               f"actual={result['actual']!r} passed={result['passed']}")
     print(f"Passed: {sum(r['passed'] for r in results)}/{len(results)}")
+    finish(results, [dict(total=len(results), passed=sum(r['passed'] for r in results))])
 
 
 if __name__ == '__main__':
