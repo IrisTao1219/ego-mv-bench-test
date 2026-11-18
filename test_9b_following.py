@@ -3,7 +3,7 @@ import argparse
 import json
 from difflib import SequenceMatcher
 
-from run_inference import prompt_for, check_response, DEDUP_RULE
+from run_inference import prompt_for, check_response, DEDUP_RULE, inference_messages
 
 
 RULE = """You are checking cooking mistakes.
@@ -57,7 +57,7 @@ def compare_feedback(first, second):
     )
 
 
-def repeat_probe(generate):
+def repeat_probe(generate, factorial=False):
     scenarios = [
         ('盐量不足', 'Add two teaspoons of salt to the bowl.',
          'The person added one teaspoon of salt to the bowl, put the spoon away, '
@@ -73,11 +73,16 @@ def repeat_probe(generate):
     for name, instruction, observation in scenarios:
         # Each request is independent, just like the project's turn-based calls.
         # Textual observation substitutes for images in this diagnostic.
-        def request(label, current_observation, history, explicit_dedup=False):
+        def request(label, current_observation, history, explicit_dedup=False,
+                    assistant_history=False):
             prompt = prompt_for('mistake', instruction, 0, history, explicit_dedup=False)
             text = prompt + '\n\nCurrent observation: ' + current_observation
             if explicit_dedup:
                 text += '\n\n' + DEDUP_RULE
+            if assistant_history:
+                # Use exactly the production helper, including the initial
+                # instruction user message and aggregated assistant feedback.
+                return generate(label, inference_messages(instruction, [], text, history))
             return generate(label, text)
 
         first_raw = request(name + ' / 首轮', observation, [])
@@ -92,22 +97,33 @@ def repeat_probe(generate):
             continue
         history = [{'time': 0, 'feedback': first['feedback']}]
         variants = [
-            ('完全相同观察', observation),
-            ('几乎相同观察', observation + ' No additional action occurred; the state is unchanged.'),
+            ('完全相同观察', observation, 'NO'),
+            ('几乎相同观察', observation + ' No additional action occurred; the state is unchanged.', 'NO'),
         ]
+        if factorial:
+            variants.append(('纠正后新一次执行又犯错',
+                'The previously reported incident was fully corrected. The person '
+                'then started a NEW, SEPARATE execution of the same instruction. '
+                'In this new execution: ' + observation, 'YES'))
         # Share the same original first response across all comparisons.
         # Within each observation pair, only the appended rule changes.
-        comparisons = [(variant, current, policy, enabled)
-                       for variant, current in variants
-                       for policy, enabled in [('original', False), ('explicit_dedup', True)]]
-        for variant, current, policy, enabled in comparisons:
-            raw = request(name + ' / ' + variant + ' / ' + policy, current, history, enabled)
-            result = dict(case=name, variant=variant, prompt_policy=policy, first_raw=first_raw,
+        comparisons = [(variant, current, expected, policy, enabled, use_history)
+                       for variant, current, expected in variants
+                       for policy, enabled in [('original', False), ('explicit_dedup', True)]
+                       for use_history in ([False, True] if factorial else [False])]
+        for variant, current, expected, policy, enabled, use_history in comparisons:
+            structure = 'assistant_history' if use_history else 'single_user'
+            raw = request(name + ' / ' + variant + ' / ' + policy + ' / ' + structure,
+                          current, history, enabled, use_history)
+            result = dict(case=name, variant=variant, prompt_policy=policy,
+                          message_structure=structure, first_raw=first_raw,
                           history_feedback=first['feedback'], second_raw=raw,
-                          expected_decision='NO')
+                          expected_decision=expected)
             try:
                 second = check_response(raw, 'mistake')
-                result.update(status='ok', repeated_trigger=second['mistake'],
+                result.update(status='ok', detected_mistake=second['mistake'],
+                              passed=second['mistake'] == (expected == 'YES'),
+                              repeated_trigger=expected == 'NO' and second['mistake'],
                               second_feedback=second['feedback'])
                 if second['mistake']:
                     result.update(compare_feedback(first['feedback'], second['feedback']))
@@ -117,13 +133,22 @@ def repeat_probe(generate):
             print(json.dumps(result, ensure_ascii=False), flush=True)
     print('\n--- REPEAT SUMMARY ---')
     print(json.dumps(results, ensure_ascii=False, indent=2))
-    for policy in ('original', 'explicit_dedup'):
-        rows = [r for r in results if r.get('prompt_policy') == policy]
+    groups = [(policy, structure) for policy in ('original', 'explicit_dedup')
+              for structure in (['single_user', 'assistant_history'] if factorial else ['single_user'])]
+    for policy, structure in groups:
+        rows = [r for r in results if r.get('prompt_policy') == policy
+                and r.get('message_structure') == structure]
         valid = [r for r in rows if r['status'] == 'ok']
         print(json.dumps(dict(
-            prompt_policy=policy, comparisons=len(rows), valid_responses=len(valid),
+            prompt_policy=policy, message_structure=structure,
+            comparisons=len(rows), valid_responses=len(valid),
             repeated_triggers=sum(r['repeated_trigger'] for r in valid),
-            exact_text_repeats=sum(r.get('exact_same_text', False) for r in valid),
+            exact_text_repeats=sum(r.get('exact_same_text', False) for r in valid
+                                   if r['expected_decision'] == 'NO'),
+            repeat_test_count=sum(r['expected_decision'] == 'NO' for r in rows),
+            new_incident_controls=sum(r['expected_decision'] == 'YES' for r in rows),
+            new_incident_detected=sum(r['detected_mistake'] for r in valid
+                                      if r['expected_decision'] == 'YES'),
             invalid_responses=len(rows) - len(valid),
         ), ensure_ascii=False))
     return results
@@ -133,8 +158,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model-path', required=True)
     parser.add_argument('--device-map', default='cuda:0')
-    parser.add_argument('--mode', choices=('decision', 'repeat'), default='decision',
-                        help='decision: original YES/NO tests; repeat: generate and compare actual feedback')
+    parser.add_argument('--mode', choices=('decision', 'repeat', 'factorial'), default='decision',
+                        help='decision: YES/NO; repeat: rule comparison; factorial: rule x assistant history with new-incident controls')
     args = parser.parse_args()
 
     import torch
@@ -147,7 +172,8 @@ def main():
     ).eval()
 
     def generate(name, prompt):
-        messages = [{'role': 'user', 'content': [{'type': 'text', 'text': prompt}]}]
+        messages = (prompt if isinstance(prompt, list) else
+                    [{'role': 'user', 'content': [{'type': 'text', 'text': prompt}]}])
         rendered = processor.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True, enable_thinking=False,
         )
@@ -164,8 +190,8 @@ def main():
         print('RESPONSE: ' + raw, flush=True)
         return raw
 
-    if args.mode == 'repeat':
-        repeat_probe(generate)
+    if args.mode in ('repeat', 'factorial'):
+        repeat_probe(generate, factorial=args.mode == 'factorial')
         return
 
     results = []

@@ -302,3 +302,9 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
 ```
 
 本地验证：`python -m unittest test_proassist test_full_recipe test_inference test_evaluate_official`。测试覆盖实际控制循环的静默/纠错/成功、两种步骤协议、无参考反馈泄漏、格式错误、官方输出格式，以及模拟官方模型接口的路径重定向和 KV cache 传递。尚未在真实 ProAssist 权重/GPU 上运行推理；服务器短跑是必要的后续验证。
+
+## 纯文本去重因素对照
+
+`test_9b_following.py --mode factorial --model-path /实际模型路径/Qwen3.5-9B` 在同一模型加载下比较四组：论文规则＋单条 user、明确规则＋单条 user、论文规则＋assistant 历史、明确规则＋assistant 历史。历史数组始终保留，assistant 条件复用正式实验的 `inference_messages`，因此测量的是增加整组历史消息包装的作用，而不是仅改变一个 role 标签。每个场景共用一条原提示词首轮反馈；规则始终放在观察末尾，与此前纯文本对照一致。
+
+包含盐量、油量、温度三个场景，各比较相同观察、几乎相同观察，以及“纠正后新一次执行又犯错”（预期 YES）的控制，正常共 39 次生成。每组分别汇总重复触发、逐字重复、解析失败和新事件检出数；新事件即使生成同样话术也不计为应拦截的重复。首轮没有生成有效反馈时跳过该场景并记录原因。原 decision/repeat 模式保留。该对照不包含视频，也不检验完成检测，尚无真实运行结果。
