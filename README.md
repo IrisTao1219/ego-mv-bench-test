@@ -1,6 +1,6 @@
 # Ego-MC-Bench 论文复现
 
-> 2026-11-18 消息结构更新：真实 per-step/full-recipe 推理只发送一条 user 消息，不再附加 assistant 反馈历史。默认 detailed 错误提示词继续包含当前步骤完整反馈数组和明确去重规则；完成检测不接收反馈历史。配置记录 `message_structure=single_user`、`feedback_input_policy=detailed_mistake_prompt_array_only`。simple 原文无反馈占位符，因此该模式不额外注入历史。启动脚本输出目录新增 `-single-user` 后缀，并取消旧目录续跑，请将本组与已有结果分开比较。
+> 2026-11-18 消息结构恢复：per-step/full-recipe 推理恢复当前步骤的 assistant 反馈历史，供完成检测和错误检测共同使用；有历史时消息顺序为 user（当前指令）→ assistant（全部已输出反馈正文，不附加时间戳）→ user（视频帧与检测提示词），无历史时仅发送检测 user 消息。步骤切换时清空历史。detailed 错误提示词继续包含反馈数组及明确去重规则。配置记录消息结构和反馈输入策略。
 
 > 2026-11-17 提示词更新：`run_inference.py`（per-recipe-step）和 `run_full_recipe.py` 现在默认在错误检测提示词末尾追加明确去重规则：同一错误已经提醒且没有新错误时，即使尚未纠正也输出 NO；只有新的、尚未报告的错误才输出 YES。完成检测不变，`paper_prompts.py` 仍保留论文原文。新配置记录 `prompt_version=arxiv_2606.09547v2_appendix_D_explicit_dedup_v1`、`paper_prompt_verbatim=false` 和完整 `mistake_dedup_rule`。下文关于逐字使用论文模板的描述对应此前基线。请使用新输出目录运行并与旧结果分开评测；当前证据来自小规模纯文本对照，尚未验证完整视频上的错误召回。诊断脚本的 `original` 分支仍使用原模板，`explicit_dedup` 分支仍只追加一次规则。
 

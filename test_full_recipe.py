@@ -139,11 +139,12 @@ class FullRecipeTests(unittest.TestCase):
             ['NO', 'YES. Add more salt.', 'NO', 'NO', 'YES. First done.', 'YES. Second done.'],
             interval=65, frame_count=301)
         rows = [json.loads(line) for line in inputs.splitlines()]
-        self.assertTrue(all([m['role'] for m in row['messages']] == ['user'] for row in rows))
+        self.assertEqual([m['role'] for m in rows[0]['messages']], ['user'])
         later = next(row for row in rows if row['timestamp'] == 130 and row['stage'] == 'mistake')
-        self.assertIn('Add more salt.', later['messages'][0]['content'][-1]['text'])
+        self.assertIn('Add more salt.', later['messages'][-1]['content'][-1]['text'])
         completion = next(row for row in rows if row['timestamp'] == 130 and row['stage'] == 'completion')
-        self.assertNotIn('Add more salt.', json.dumps(completion['messages']))
+        self.assertEqual([m['role'] for m in completion['messages']], ['user', 'assistant', 'user'])
+        self.assertIn('Add more salt.', completion['messages'][1]['content'])
         next_step = next(row for row in rows if row['timestamp'] == 260)
         self.assertEqual(len(next_step['messages']), 1)
         self.assertNotIn('Add more salt.', json.dumps(next_step))
