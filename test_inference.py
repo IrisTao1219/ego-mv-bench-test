@@ -33,16 +33,20 @@ class InferenceTests(unittest.TestCase):
         for stage in ('completion', 'mistake'):
             self.assertNotIn('SECRET', prompt_for(stage, steps[0]['instruction'], 22, []))
 
-    def test_entire_step_history_visible_to_both_stages_and_simple_prompt(self):
+    def test_history_only_in_detailed_mistake_prompt(self):
         history = [{'time': 1, 'feedback': 'Add salt.'},
                    {'time': 90, 'feedback': 'Lower heat.'}]
-        for stage in ('completion', 'mistake'):
-            prompt = prompt_for(stage, 'Cook', 200, history, 'simple')
-            messages = inference_messages('Cook', [], prompt, history)
-            self.assertEqual(messages[1], {'role': 'assistant',
-                'content': 'Feedback: Add salt.\nFeedback: Lower heat.'})
-            self.assertEqual(messages[-1]['content'][-1]['text'], prompt)
-        self.assertEqual(len(inference_messages('Next', [], 'Prompt', [])), 1)
+        for variant in ('detailed', 'simple'):
+            for stage in ('completion', 'mistake'):
+                prompt = prompt_for(stage, 'Cook', 200, history, variant)
+                messages = inference_messages([], prompt)
+                self.assertEqual(len(messages), 1)
+                self.assertEqual(messages[0]['role'], 'user')
+                self.assertEqual(messages[0]['content'][-1]['text'], prompt)
+                for entry in history:
+                    self.assertEqual(entry['feedback'] in prompt,
+                                     stage == 'mistake' and variant == 'detailed')
+        self.assertEqual(len(inference_messages([], 'Prompt')), 1)
 
     def test_paper_responses(self):
         for field in ('completed', 'mistake'):

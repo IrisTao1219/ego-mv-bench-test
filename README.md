@@ -1,5 +1,7 @@
 # Ego-MC-Bench 论文复现
 
+> 2026-11-18 消息结构更新：真实 per-step/full-recipe 推理只发送一条 user 消息，不再附加 assistant 反馈历史。默认 detailed 错误提示词继续包含当前步骤完整反馈数组和明确去重规则；完成检测不接收反馈历史。配置记录 `message_structure=single_user`、`feedback_input_policy=detailed_mistake_prompt_array_only`。simple 原文无反馈占位符，因此该模式不额外注入历史。启动脚本输出目录新增 `-single-user` 后缀，并取消旧目录续跑，请将本组与已有结果分开比较。
+
 > 2026-11-17 提示词更新：`run_inference.py`（per-recipe-step）和 `run_full_recipe.py` 现在默认在错误检测提示词末尾追加明确去重规则：同一错误已经提醒且没有新错误时，即使尚未纠正也输出 NO；只有新的、尚未报告的错误才输出 YES。完成检测不变，`paper_prompts.py` 仍保留论文原文。新配置记录 `prompt_version=arxiv_2606.09547v2_appendix_D_explicit_dedup_v1`、`paper_prompt_verbatim=false` 和完整 `mistake_dedup_rule`。下文关于逐字使用论文模板的描述对应此前基线。请使用新输出目录运行并与旧结果分开评测；当前证据来自小规模纯文本对照，尚未验证完整视频上的错误召回。诊断脚本的 `original` 分支仍使用原模板，`explicit_dedup` 分支仍只追加一次规则。
 
 本项目使用本地 Qwen3-VL-2B-Instruct，复现论文 *Streaming Interventions: Can Video Large Language Models Correct Mistakes as They Occur?* 中的 per-recipe-step 推理与官方评测流程。当前实现是遵循论文流程的基础模型基线，具体差异见下文。
@@ -312,8 +314,13 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
 
 本地验证：`python -m unittest test_proassist test_full_recipe test_inference test_evaluate_official`。测试覆盖实际控制循环的静默/纠错/成功、两种步骤协议、无参考反馈泄漏、格式错误、官方输出格式，以及模拟官方模型接口的路径重定向和 KV cache 传递。尚未在真实 ProAssist 权重/GPU 上运行推理；服务器短跑是必要的后续验证。
 
-## 纯文本去重因素对照
+## 纯文本去重规则对照
 
-`test_9b_following.py --mode factorial --model-path /实际模型路径/Qwen3.5-9B` 在同一模型加载下比较四组：论文规则＋单条 user、明确规则＋单条 user、论文规则＋assistant 历史、明确规则＋assistant 历史。历史数组始终保留，assistant 条件复用正式实验的 `inference_messages`，因此测量的是增加整组历史消息包装的作用，而不是仅改变一个 role 标签。每个场景共用一条原提示词首轮反馈；规则始终放在观察末尾，与此前纯文本对照一致。
+```bash
+CUDA_VISIBLE_DEVICES=2 python test_9b_following.py \
+  --model-path /实际模型路径/Qwen3.5-9B \
+  --mode repeat \
+  --output outputs/following-test/9b-repeat.json
+```
 
-包含盐量、油量、温度三个场景，各比较相同观察、几乎相同观察，以及“纠正后新一次执行又犯错”（预期 YES）的控制，正常共 39 次生成。每组分别汇总重复触发、逐字重复、解析失败和新事件检出数；新事件即使生成同样话术也不计为应拦截的重复。首轮没有生成有效反馈时跳过该场景并记录原因。原 decision/repeat 模式保留。该对照不包含视频，也不检验完成检测，尚无真实运行结果。
+只使用单条 user 消息，比较原提示词与追加明确去重规则。每个场景共享首轮反馈，保留历史数组；覆盖盐量、油量、温度三个场景，每个场景包含相同观察、几乎相同观察及新一次执行再次犯错的控制，正常共 21 次生成。分别汇总逐字重复和新事件检出，JSON 保存完整输入、响应、结果及汇总。decision 模式保留。
