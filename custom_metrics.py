@@ -13,9 +13,8 @@ Timing errors use the FIRST Success on each instruction-matched reference step,
 including out-of-window events; signed error = prediction minus reference.
 Hit rates @5/15/30 use all reference steps as denominator (missing = miss).
 
-Relaxed IC-Acc uses only mistake-free reference steps, accepts any in-window
-Success despite preceding Feedback. False-alarm rate is the fraction of those
-steps containing Feedback (also counts wrong-instruction steps). Repeats are
+False-alarm rate is the fraction of mistake-free reference steps containing
+Feedback (also counts wrong-instruction steps). Repeats are
 exact, stripped Feedback bodies repeated within the same predicted step;
 repeat rate divides extra occurrences by all Feedback events. Undefined ratios
 and empty timing statistics are null. No semantic repetition metric is implied.
@@ -43,7 +42,7 @@ def calculate_custom_metrics(dataset, predictions, instruction_matches):
     for index in range(len(dataset)):
         item = dataset[index]
         references[item['video_id']] = item
-    steps = clean = alarms = relaxed = successes = tp = feedbacks = repeats = 0
+    steps = clean = alarms = successes = tp = feedbacks = repeats = 0
     errors = []
     hits = {window: 0 for window in (5, 15, 30)}
     for prediction in predictions:
@@ -71,7 +70,6 @@ def calculate_custom_metrics(dataset, predictions, instruction_matches):
                 hits[window] += any(abs(time - end) < window for time in times)
             matched = any(abs(time - end) < 15 for time in times)
             tp += matched
-            relaxed += is_clean and matched
     fp, fn = successes - tp, steps - tp
     return {
         'metric_version': 1,
@@ -87,7 +85,6 @@ def calculate_custom_metrics(dataset, predictions, instruction_matches):
         'completion_mean_signed_error_seconds': mean(errors) if errors else None,
         'completion_mean_absolute_error_seconds': mean(map(abs, errors)) if errors else None,
         'completion_median_absolute_error_seconds': median(map(abs, errors)) if errors else None,
-        'relaxed_ic_hits': relaxed, 'relaxed_ic_accuracy_at_15s': _ratio(relaxed, clean),
         'mistake_free_steps_with_feedback': alarms,
         'mistake_free_step_false_alarm_rate': _ratio(alarms, clean),
         'feedback_events': feedbacks, 'exact_repeat_feedback_events': repeats,

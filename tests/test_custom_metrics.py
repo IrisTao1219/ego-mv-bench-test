@@ -10,10 +10,10 @@ class CustomMetricsTests(unittest.TestCase):
         predictions = [{'video_id': 'v', 'pred_texts': texts, 'pred_timestamps': times}]
         return calculate_custom_metrics(dataset, predictions, lambda a, b: a == b)
 
-    def test_feedback_does_not_disqualify_relaxed_completion(self):
+    def test_feedback_and_completion_are_scored_independently(self):
         m = self.score(['Instruct: Add oil', 'Feedback: More', 'Feedback: More',
                         'Success: Done'], [0, 5, 10, 21])
-        self.assertEqual(m['relaxed_ic_accuracy_at_15s'], 1)
+        self.assertEqual(m['completion_tp'], 1)
         self.assertEqual(m['mistake_free_step_false_alarm_rate'], 1)
         self.assertEqual(m['exact_repeat_feedback_rate'], .5)
         self.assertEqual(m['completion_mean_signed_error_seconds'], 1)
@@ -35,10 +35,10 @@ class CustomMetricsTests(unittest.TestCase):
             self.assertEqual(m['completion_fn'], 1)
             self.assertIsNone(m['completion_mean_absolute_error_seconds'])
 
-    def test_mistake_step_in_completion_but_not_relaxed_denominator(self):
+    def test_mistake_step_in_completion_but_not_false_alarm_denominator(self):
         m = self.score(['Instruct: Add oil', 'Success: Done'], [0, 20], mistake=True)
         self.assertEqual(m['completion_recall_at_15s'], 1)
-        self.assertIsNone(m['relaxed_ic_accuracy_at_15s'])
+        self.assertIsNone(m['mistake_free_step_false_alarm_rate'])
 
     def test_coverage_extra_steps_and_repeat_scope(self):
         dataset = [{'video_id': v, 'texts': [['Add oil']],
