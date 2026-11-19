@@ -20,6 +20,29 @@ from run_inference import (load_samples, recipe_steps, save_json,
 from run_full_recipe import instruction_texts
 
 
+def system_rules(args):
+    """Reuse task definitions, with changing values supplied by the user turn."""
+    completion = prompt_for('completion', '[recipe_step]', 0, [])
+    mistake = prompt_for('mistake', '[recipe_step]', 0, [], args.mistake_prompt,
+                         explicit_dedup=args.feedback_dedup_rule == 'explicit',
+                         silent_negative=True)
+    mistake = mistake.replace('mistakes:[]', 'mistakes:[prev_detected_mistakes]')
+    return ('Use recipe_step and prev_detected_mistakes from the latest user message. '
+            'Answer only the active check named by that message.\n\n'
+            'Completion check rules:\n' + completion + '\n\nMistake check rules:\n' + mistake)
+
+
+def cache_tokens(past):
+    """Inspect legacy tuple caches and Transformers Cache objects without copying."""
+    if past is None:
+        return 0
+    if hasattr(past, 'get_seq_length'):
+        return int(past.get_seq_length())
+    if isinstance(past, (tuple, list)) and past:
+        return int(past[0][0].shape[-2])
+    return None
+
+
 def parse_event(text, stage='completion'):
     """Share YES/NO parsing and serialization; silence is not a negative answer."""
     if not text.strip():
@@ -116,24 +139,28 @@ class ProAssistBackend:
         self.instruction = instruction
         self.recent = []
         # Keep the same completion task in the upstream summary continuation.
-        self.runner.initial_sys_prompt = prompt_for('completion', instruction, 0, [])
+        self.runner.initial_sys_prompt = system_rules(self.args)
         self.runner.knowledge = 'Task knowledge: Current recipe step: ' + instruction
 
     def _query(self, rgb, timestamp, stage):
         began = time.monotonic()
         torch = self.torch
         import numpy as np
-        prompt = prompt_for(stage, self.instruction, timestamp, self.recent,
-                            self.args.mistake_prompt,
-                            explicit_dedup=self.args.feedback_dedup_rule == 'explicit',
-                            silent_negative=True)
-        # Use the shared role arrangement. mmassist accepts string message content,
-        # while the Qwen helper represents its final text as a multimodal block.
+        # Stable task and output rules enter once, rather than every frame.
+        prompt = ('Active check: ' + stage + '\nrecipe_step: ' + self.instruction
+                  + '\nprev_detected_mistakes: ' + json.dumps(
+                      [item['feedback'] for item in self.recent], ensure_ascii=False)
+                  + ('\nHas the person already completed this step? Answer YES with evidence or NO.'
+                     if stage == 'completion' else
+                     '\nIs a mistake visible? Answer YES. <feedback> or remain silent.'))
         messages = inference_messages([], prompt, self.instruction, self.recent,
                                       assistant_feedback=self.args.assistant_feedback)
         messages = [dict(m, content=(''.join(block['text'] for block in m['content'])
                                     if isinstance(m['content'], list) else m['content']))
                     for m in messages]
+        if self.first:
+            messages.insert(0, {'role': 'system', 'content': self.runner.initial_sys_prompt})
+        cache_before = cache_tokens(self.past)
         ids, input_str = self.runner.processor.get_input_sequence(
             int(rgb is not None), messages, self.first)
         self.first = False
@@ -144,6 +171,7 @@ class ProAssistBackend:
         inputs = self.runner.processor.add_last_assistant_message(inputs, self.last)
         inputs = {k: v.to(self.model.device, self.model.dtype) if v.is_floating_point()
                   else v.to(self.model.device) for k, v in inputs.items()}
+        self.model.last_not_talk_prob = None
         with torch.inference_mode():
             embeds = self.model.joint_embed(**inputs)
             if self.args.max_new_tokens:
@@ -170,7 +198,11 @@ class ProAssistBackend:
                 event = prediction_event(parsed, field)
             except ValueError as exc:
                 error = str(exc)
+        probability = self.model.last_not_talk_prob
+        probability = float(probability.item() if hasattr(probability, 'item') else probability) if probability is not None else None
         return dict(stage=stage, prompt=prompt, raw_response=cleaned,
+                    not_talk_probability=probability, not_talk_threshold=self.args.not_talk_threshold,
+                    kv_cache_tokens_before=cache_before, kv_cache_tokens_after_generation=cache_tokens(self.past),
                     decoded_response=decoded, role=role, parsed=parsed,
                     parse_error=error, accepted=event,
                     generated_tokens=output.shape[1],
@@ -193,6 +225,7 @@ class ProAssistBackend:
             frame = SimpleNamespace(model_inputs=frame_inputs, num_frames=1)
             with self.torch.inference_mode():
                 self.past, self.last = self.runner.manage_kv_cache(frame, self.past, self.last)
+        responses[-1]['kv_cache_tokens_after_management'] = cache_tokens(self.past)
         return dict(responses=responses)
 
     def close(self):
@@ -319,7 +352,8 @@ def main():
                   response_mapping='shared_yes_no_completion_then_mistake',
                   response_format='YES_NO',
                   success_message_policy='fixed_confirmation_reason_logged_only',
-                  task_prompt_policy='shared_prompt_for_each_frame_native_silence_not_NO',
+                  task_prompt_policy='shared_rules_system_once_dynamic_user_query_native_silence_not_NO',
+                  system_prompt=system_rules(args),
                   completion_prompt_template=prompt_for('completion', '[recipe_step]', 0, []),
                   feedback_history_policy='current_step_last_60s_exact_text_dedup_latest',
                   context_handling='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',
@@ -333,7 +367,8 @@ def main():
         config['mistake_dedup_rule'] = config['mistake_dedup_rule'].replace(
             'answer NO', 'remain silent and generate no textual response')
     config.update(mistake_negative_policy='native_silence',
-                  prompt_version=config['prompt_version'] + '_mistake_silence_v1',
+                  message_structure='system_rules_once_user_stage_query_optional_assistant_feedback',
+                  prompt_version=config['prompt_version'] + '_mistake_silence_system_roles_v1',
                   paper_prompt_verbatim=False)
     save_json(args.output_dir / 'config.json', config)
     backend = None

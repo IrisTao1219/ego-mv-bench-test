@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from evaluate_official import validate_predictions
-from run_proassist import ProAssistBackend, parse_event, run_video
+from run_proassist import ProAssistBackend, parse_event, run_video, system_rules, cache_tokens
 from run_inference import check_response, prediction_event, prompt_for
 
 
@@ -138,6 +138,18 @@ class ProAssistTests(unittest.TestCase):
             self.assertEqual(backend.recent, [])
             self.assertEqual((backend.past, backend.last), ('summary-cache', 'summary-message'))
 
+    def test_cache_size_and_shared_system_rules(self):
+        import torch
+        self.assertEqual(cache_tokens(None), 0)
+        self.assertEqual(cache_tokens(((torch.zeros(1, 2, 19, 3), None),)), 19)
+        self.assertEqual(cache_tokens(SimpleNamespace(get_seq_length=lambda: 27)), 27)
+        args = SimpleNamespace(mistake_prompt='detailed', feedback_dedup_rule='explicit')
+        rules = system_rules(args)
+        self.assertIn(prompt_for('completion', '[recipe_step]', 0, []), rules)
+        self.assertIn('[prev_detected_mistakes]', rules)
+        self.assertIn('remain silent', rules)
+        self.assertNotIn('mistakes:[]', rules)
+
     def test_backend_checkpoint_paths_and_stream_cache(self):
         import torch
         import numpy as np
@@ -146,6 +158,7 @@ class ProAssistTests(unittest.TestCase):
         config = SimpleNamespace(num_tokens_per_img=1, use_binary_decision_head=False,
                                  eos_token_id=6, w2t_target_id=7)
         def generate(embeds, past, **kwargs):
+            model.last_not_talk_prob = torch.tensor(.25)
             calls.append(('generate', past, kwargs))
             buffer[:] = torch.tensor([[5, 6]])
             return buffer, 'cache'
@@ -215,9 +228,15 @@ class ProAssistTests(unittest.TestCase):
                     self.assertFalse(stages[0]['hit_token_limit'])
                     self.assertEqual(stages[1]['accepted'], 'Feedback: Fix it.')
                     self.assertEqual(second['responses'][0]['accepted'], 'Success: Step complete.')
-                    self.assertEqual(stages[0]['input_messages'], [{'role': 'user',
-                        'content': prompt_for('completion', 'FIRST', 0, [])}])
-                    self.assertEqual(stages[1]['prompt'], prompt_for('mistake', 'FIRST', 0, [], silent_negative=True))
+                    self.assertEqual([m['role'] for m in stages[0]['input_messages']], ['system', 'user'])
+                    self.assertEqual(stages[0]['input_messages'][0]['content'], system_rules(args))
+                    self.assertIn('recipe_step: FIRST', stages[0]['prompt'])
+                    self.assertIn('Active check: mistake', stages[1]['prompt'])
+                    self.assertNotIn('system', [m['role'] for m in stages[1]['input_messages']])
+                    self.assertNotIn('system', [m['role'] for m in second['responses'][0]['input_messages']])
+                    self.assertIn('recipe_step: SECOND', second['responses'][0]['prompt'])
+                    self.assertEqual(stages[0]['not_talk_probability'], .25)
+                    self.assertEqual(stages[0]['kv_cache_tokens_before'], 0)
                     generated = [c for c in calls if c[0] == 'generate']
                     self.assertEqual([c[1] for c in generated], [None, 'cache', 'managed-cache'])
                     self.assertEqual([c for c in calls if c[0] == 'last'][1][1].tolist(), [[6]])
