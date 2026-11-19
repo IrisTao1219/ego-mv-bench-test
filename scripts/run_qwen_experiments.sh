@@ -114,13 +114,13 @@ python scripts/wait_for_gpu.py \
   --gpu 2 \
   --min-free-mib 21680 \
   --interval 5 \
-  -- CUDA_VISIBLE_DEVICES=3 python run_proassist.py \
-  --data-root ../datasets/ego-mc-bench \ß
+  -- CUDA_VISIBLE_DEVICES=2 python run_proassist.py \
+  --data-root ../datasets/ego-mc-bench \
   --proassist-root ../ProAssist \
   --model-path ../models/ProAssist-Model-L4096-I5 \
   --base-model-path ../models/Llama-3.1-8B-Instruct \
   --vision-model-path ../models/siglip-so400m-patch14-384 \
   --protocol per_recipe_step \
-  --output-dir outputs/proassist-i5-smoke \
+  --output-dir outputs/proassist-i5-smoke --overwirte \
   --limit 0
   

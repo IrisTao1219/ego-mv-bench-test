@@ -1,0 +1,37 @@
+{
+  "video_id": "GX010030",
+  "pred_texts": [
+    "Instruct: Get a one pound of broccoli and cut the florets.",
+    "Feedback: Great! Now, please cut the broccoli into florets.",
+    "Instruct: Now get a bell pepper and chop it into small pieces.",
+    "Feedback: Great! To chop the bell pepper, first wash it under running water to remove any dirt or debris.",
+    "Instruct: Now take a pan and oil and add oil to the pan.",
+    "Instruct: Now turn on the stove.",
+    "Feedback: Great! Now, let's heat up the pan.",
+    "Instruct: Now add the cut broccoli to the pan.",
+    "Feedback: Not yet, let's check if the broccoli is cut correctly first.",
+    "Instruct: Now add the cut bell pepper.",
+    "Instruct: Now cut a beetroot and add it to the pan.",
+    "Instruct: Now add approx 1 cup of spinach to the pan.",
+    "Instruct: Now you need to stir the contents of the pan and add salt to taste to the pan.",
+    "Instruct: Now add pepper to taste.",
+    "Feedback: Great job! You've completed the seasoning step."
+  ],
+  "pred_timestamps": [
+    8.235,
+    8.235,
+    20.955,
+    20.955,
+    184.365,
+    220.105,
+    221.105,
+    230.815,
+    231.815,
+    277.565,
+    297.115,
+    327.515,
+    340.315,
+    377.255,
+    377.255
+  ]
+}
