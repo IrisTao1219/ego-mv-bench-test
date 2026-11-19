@@ -2,7 +2,7 @@
 
 > 2026-11-18 消息结构恢复：per-step/full-recipe 推理恢复当前步骤的 assistant 反馈历史，供完成检测和错误检测共同使用；有历史时消息顺序为 user（当前指令）→ assistant（最近 60 秒内按正文严格去重的反馈，不附加时间戳）→ user（视频帧与检测提示词），无历史时仅发送检测 user 消息。步骤切换时清空历史。detailed 错误提示词继续包含反馈数组及明确去重规则。配置记录消息结构和反馈输入策略。
 
-> 2026-11-17 提示词更新：`run_inference.py`（per-recipe-step）和 `run_full_recipe.py` 现在默认在错误检测提示词末尾追加明确去重规则：同一错误已经提醒且没有新错误时，即使尚未纠正也输出 NO；只有新的、尚未报告的错误才输出 YES。完成检测不变，`paper_prompts.py` 仍保留论文原文。新配置记录 `prompt_version=arxiv_2606.09547v2_appendix_D_explicit_dedup_v1`、`paper_prompt_verbatim=false` 和完整 `mistake_dedup_rule`。下文关于逐字使用论文模板的描述对应此前基线。请使用新输出目录运行并与旧结果分开评测；当前证据来自小规模纯文本对照，尚未验证完整视频上的错误召回。诊断脚本的 `original` 分支仍使用原模板，`explicit_dedup` 分支仍只追加一次规则。
+> 2026-11-17 提示词更新：`run_inference.py`（per-recipe-step）和 `run_full_recipe.py` 现在默认在错误检测提示词末尾追加明确去重规则：同一错误已经提醒且没有新错误时，即使尚未纠正也输出 NO；只有新的、尚未报告的错误才输出 YES。完成检测不变，`prompts.py` 仍保留论文原文。新配置记录 `prompt_version=arxiv_2606.09547v2_appendix_D_explicit_dedup_v1`、`paper_prompt_verbatim=false` 和完整 `mistake_dedup_rule`。下文关于逐字使用论文模板的描述对应此前基线。请使用新输出目录运行并与旧结果分开评测；当前证据来自小规模纯文本对照，尚未验证完整视频上的错误召回。诊断脚本的 `original` 分支仍使用原模板，`explicit_dedup` 分支仍只追加一次规则。
 
 本项目使用本地 Qwen3-VL-2B-Instruct，复现论文 *Streaming Interventions: Can Video Large Language Models Correct Mistakes as They Occur?* 中的 per-recipe-step 推理与官方评测流程。当前实现是遵循论文流程的基础模型基线，具体差异见下文。
 
@@ -65,7 +65,7 @@ python -m pip install -r requirements.txt
 
 ### 实现选择与复现范围
 
-这是遵循论文流程的基础模型基线，不是论文数值的严格复现。提示词已按本地 PDF 附录 D（第 15-17 页）原文对齐，保留原文笔误，仅归并排版换行。完成检测要求 `YES/NO`，`YES` 附完成理由；错误检测要求 `YES/NO`，`YES` 附纠正反馈，不追加自拟 JSON 契约或额外生成用户话术的提示要求。完成理由仅保留在日志中，预测的成功事件固定写为 `Success: Step complete.`；该固定话术是本地展示/序列化选择，论文未规定其映射。错误检测的 `YES` 后文本直接写入 `Feedback:`，不额外重写或语义过滤，以保留官方文本评测的原始输出。若模型仍生成第三人称分析，应作为模型未遵循提示词的输出保留。`paper_prompts.py` 保存原文模板，`PAPER_PROMPTS_2606.09547v2.md` 保存全部提示词与出处。默认 `--mistake-prompt detailed` 对应 Qwen3-VL/Qwen3.5/Gemini；`simple` 对应附录 D 的较早模型基线。帧上的时间标签是输入打包选择，不属于论文提示词原文。每步视频前缀默认按 1 FPS 取样，超过 32 帧时均匀下采样为最多 32 帧，图像保持宽高比，最长边不超过 448，不放大小图；这些是本地输入设置，尚未确认与论文表 2 的轮询基线一致。输入为带时间标记的多图，不是原生视频编码。未使用 Ego-CoMist+ 微调和 action head，不能对标论文表 3 的训练模型。
+这是遵循论文流程的基础模型基线，不是论文数值的严格复现。提示词已按本地 PDF 附录 D（第 15-17 页）原文对齐，保留原文笔误，仅归并排版换行。完成检测要求 `YES/NO`，`YES` 附完成理由；错误检测要求 `YES/NO`，`YES` 附纠正反馈，不追加自拟 JSON 契约或额外生成用户话术的提示要求。完成理由仅保留在日志中，预测的成功事件固定写为 `Success: Step complete.`；该固定话术是本地展示/序列化选择，论文未规定其映射。错误检测的 `YES` 后文本直接写入 `Feedback:`，不额外重写或语义过滤，以保留官方文本评测的原始输出。若模型仍生成第三人称分析，应作为模型未遵循提示词的输出保留。`prompts.py` 保存原文模板，`PAPER_PROMPTS_2606.09547v2.md` 保存全部提示词与出处。默认 `--mistake-prompt detailed` 对应 Qwen3-VL/Qwen3.5/Gemini；`simple` 对应附录 D 的较早模型基线。帧上的时间标签是输入打包选择，不属于论文提示词原文。每步视频前缀默认按 1 FPS 取样，超过 32 帧时均匀下采样为最多 32 帧，图像保持宽高比，最长边不超过 448，不放大小图；这些是本地输入设置，尚未确认与论文表 2 的轮询基线一致。输入为带时间标记的多图，不是原生视频编码。未使用 Ego-CoMist+ 微调和 action head，不能对标论文表 3 的训练模型。
 
 每步终点采用下一条 Instruction 的起点，末步采用视频终点。该边界是本实现选择，未使用隐藏 Success 时刻提前截断。首个查询在步起点 +5 秒；长度不超过 5 秒的步骤可能没有查询。保存这些选择，比较实验时保持一致。上述 `run_inference.py` 仍仅运行 per-recipe-step；独立的 Full recipes 实验见下文，不应把按时间自动切换指令称为 full-recipe 复现。
 
@@ -177,7 +177,7 @@ python evaluate_official.py --data-root ../datasets/ego-mc-bench \
 在项目根目录运行：
 
 ```bash
-python -m unittest test_inference
+python -m unittest tests.test_inference
 ```
 
 `test_inference.py` 使用构造的数据检查以下逻辑，无需视频、模型权重或 GPU，也无需安装模型推理依赖：
@@ -249,7 +249,7 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
 
 输出格式与原实验一致：`config.json` 标记 `protocol=full_recipe` 和本地协议选择，`*.jsonl` 保存原始响应与当前 `step_id`，`*.model_inputs.jsonl` 和 `model_input_frames/` 保存模型输入，`predictions.json` 可交给现有官方评测入口。`--dry-run` 的空预测不可用于评测；`--max-seconds` 截断仅用于排错。输出目录默认必须不存在。中断后可在原命令添加 `--continue --limit 0`，覆盖重跑最后开始的视频并继续，同时保留此前视频的汇总预测；模型和采样参数应与原实验一致。
 
-验证：`python -m unittest test_full_recipe test_inference test_evaluate_official`。新增测试用模拟视频和模型运行完整控制循环，检查模型驱动切换、连续时钟与上下文、标注时间戳不影响结果、滞留与格式错误行为，以及官方输出格式兼容性；不代表已运行真实 GPU 推理或复现论文数值。
+验证：`python -m unittest tests.test_full_recipe tests.test_inference tests.test_evaluate_official`。新增测试用模拟视频和模型运行完整控制循环，检查模型驱动切换、连续时钟与上下文、标注时间戳不影响结果、滞留与格式错误行为，以及官方输出格式兼容性；不代表已运行真实 GPU 推理或复现论文数值。
 
 ## ProAssist 自主发言实验
 
@@ -312,12 +312,12 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
   --report outputs/proassist-i1/official-report.txt --require-full-coverage
 ```
 
-本地验证：`python -m unittest test_proassist test_full_recipe test_inference test_evaluate_official`。测试覆盖实际控制循环的静默/纠错/成功、两种步骤协议、无参考反馈泄漏、格式错误、官方输出格式，以及模拟官方模型接口的路径重定向和 KV cache 传递。尚未在真实 ProAssist 权重/GPU 上运行推理；服务器短跑是必要的后续验证。
+本地验证：`python -m unittest tests.test_proassist tests.test_full_recipe tests.test_inference tests.test_evaluate_official`。测试覆盖实际控制循环的静默/纠错/成功、两种步骤协议、无参考反馈泄漏、格式错误、官方输出格式，以及模拟官方模型接口的路径重定向和 KV cache 传递。尚未在真实 ProAssist 权重/GPU 上运行推理；服务器短跑是必要的后续验证。
 
 ## 纯文本去重规则对照
 
 ```bash
-CUDA_VISIBLE_DEVICES=2 python test_9b_following.py \
+CUDA_VISIBLE_DEVICES=2 python -m tests.test_9b_following \
   --model-path /实际模型路径/Qwen3.5-9B \
   --mode repeat \
   --output outputs/following-test/9b-repeat.json

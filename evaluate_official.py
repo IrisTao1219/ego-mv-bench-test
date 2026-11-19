@@ -7,6 +7,8 @@ from pathlib import Path
 import sys
 from unittest.mock import patch
 
+from custom_metrics import calculate_custom_metrics
+
 
 def validate_predictions(rows, predictions):
     """Validate inference output before importing GPU metric dependencies."""
@@ -75,6 +77,10 @@ def main():
         with patch.object(data, 'load_dataset', return_value=LocalRows()):
             dataset = data.EgoMCBench(split='test')
         official_eval.run(dataset, predictions)
+        print('\nSupplementary metrics (custom_metrics.py, version 1; rates in [0, 1]):')
+        metrics = calculate_custom_metrics(
+            dataset, predictions, official_eval.check_if_correct_instruction_given)
+        print(json.dumps(metrics, indent=2, allow_nan=False))
     print(f'Report: {a.report}')
 
 

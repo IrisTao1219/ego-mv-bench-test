@@ -3,7 +3,8 @@ import contextlib
 import io
 import unittest
 
-from test_9b_following import DEDUP_RULE, repeat_probe
+from prompts import DEDUP_RULE
+from tests.test_9b_following import repeat_probe
 
 
 class FollowingProbeTests(unittest.TestCase):

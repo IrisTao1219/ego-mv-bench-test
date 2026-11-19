@@ -319,7 +319,7 @@ Answer YES only for a new, previously unreported mistake.
 三场景 × 两种观察 × 两种策略，共 12 次后续比较，加上 3 次首轮生成。脚本保留原始输出，分别汇总重复触发、逐字重复和解析失败。运行方式：
 
 ```bash
-CUDA_VISIBLE_DEVICES=2 python test_9b_following.py \
+CUDA_VISIBLE_DEVICES=2 python -m tests.test_9b_following \
   --model-path /实际模型绝对路径/Qwen3.5-9B \
   --mode repeat
 ```
@@ -354,7 +354,7 @@ CUDA_VISIBLE_DEVICES=2 python test_9b_following.py \
 
 ### 实验代码接入（2026-11-17）
 
-根据上述配对结果，已将同一条明确去重规则默认接入 `run_inference.py` 和 `run_full_recipe.py` 的错误检测提示词末尾，覆盖 detailed/simple 两种模板。完成检测提示词不变。`paper_prompts.py` 保留论文原文；新运行配置标记 `prompt_version=arxiv_2606.09547v2_appendix_D_explicit_dedup_v1`、`paper_prompt_verbatim=false`，并保存完整 `mistake_dedup_rule`。该接入仅增加模型输入规则，没有新增输出去重过滤，也没有改变反馈缓存作用域。
+根据上述配对结果，已将同一条明确去重规则默认接入 `run_inference.py` 和 `run_full_recipe.py` 的错误检测提示词末尾，覆盖 detailed/simple 两种模板。完成检测提示词不变。`prompts.py` 保留论文原文；新运行配置标记 `prompt_version=arxiv_2606.09547v2_appendix_D_explicit_dedup_v1`、`paper_prompt_verbatim=false`，并保存完整 `mistake_dedup_rule`。该接入仅增加模型输入规则，没有新增输出去重过滤，也没有改变反馈缓存作用域。
 
 `test_9b_following.py` 显式使用原模板构建对照输入，再按分支追加同一份规则，保证 original 分支不受正式实验默认值变化影响、explicit_dedup 分支不会重复追加。未重跑正式 GPU 视频实验或更新前文官方评测指标。新运行应使用独立输出目录。
 

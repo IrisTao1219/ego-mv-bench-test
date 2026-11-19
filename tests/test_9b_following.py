@@ -4,7 +4,8 @@ import json
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from run_inference import prompt_for, check_response, DEDUP_RULE, save_json
+from prompts import DEDUP_RULE
+from run_inference import prompt_for, check_response, save_json
 
 
 RULE = """You are checking cooking mistakes.

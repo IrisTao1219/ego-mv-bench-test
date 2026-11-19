@@ -90,7 +90,7 @@ class FullRecipeTests(unittest.TestCase):
                 config = json.loads((root/'out/config.json').read_text())
                 self.assertEqual(config['feedback_dedup_rule'], dedup_rule)
                 self.assertEqual(config['paper_prompt_verbatim'], dedup_rule == 'paper')
-                from run_inference import DEDUP_RULE
+                from prompts import DEDUP_RULE
                 self.assertEqual(config['mistake_dedup_rule'],
                                  DEDUP_RULE if dedup_rule == 'explicit' else None)
                 self.assertEqual(config['prompt_version'], 'arxiv_2606.09547v2_appendix_D_' +
@@ -106,7 +106,7 @@ class FullRecipeTests(unittest.TestCase):
         self.assertEqual(len(logs), 2)
 
     def test_cli_dedup_policy_controls_both_protocols(self):
-        from run_inference import DEDUP_RULE
+        from prompts import DEDUP_RULE
         for per_step in (False, True):
             for policy in ('paper', 'explicit'):
                 with self.subTest(per_step=per_step, policy=policy):

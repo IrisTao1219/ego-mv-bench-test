@@ -4,8 +4,9 @@ import tempfile
 from pathlib import Path
 from run_inference import continuation_state
 from run_inference import recipe_steps, check_response, prompt_for, prediction_event, inference_messages
-from paper_prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
-from run_inference import DEDUP_RULE, feedback_context
+from prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
+from prompts import DEDUP_RULE
+from run_inference import feedback_context
 
 
 class InferenceTests(unittest.TestCase):
