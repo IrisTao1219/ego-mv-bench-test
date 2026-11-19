@@ -17,3 +17,12 @@ DEDUP_RULE = """Before answering, compare the current mistake with the previous 
 If the same mistake was already reported and no new mistake occurred,
 answer NO, even if the mistake remains uncorrected.
 Answer YES only for a new, previously unreported mistake."""
+
+
+# Local adaptation for streaming models with a native silence decision.
+SILENT_MISTAKE_RESPONSE = (
+    "If you observe a mistake, your response MUST BEGIN WITH ‘YES’, followed by "
+    "a concise feedback to the user describing the mistake (i.e. YES. <feedback>.). "
+    "Directly address the person. If you do not observe a mistake, remain silent "
+    "and generate no textual response."
+)

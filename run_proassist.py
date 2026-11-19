@@ -1,6 +1,6 @@
 """ProAssist frame-triggered interventions with the official mmassist backend.
 
-The tagged response prompt and instruction scheduling are local adaptations,
+The shared turn-based task prompts and instruction scheduling are local adaptations,
 not the unpublished Ego-MC-Bench authors' ProAssist evaluation implementation.
 """
 import argparse
@@ -8,38 +8,27 @@ import json
 import math
 import os
 from pathlib import Path
-import re
 import sys
 import tempfile
+import time
 from types import SimpleNamespace
 
 from run_inference import (load_samples, recipe_steps, save_json,
-                           add_visual_arguments, add_data_arguments, resize_frame, continuation_state)
+                           add_visual_arguments, add_data_arguments, resize_frame, continuation_state,
+                           prompt_for, check_response, prediction_event, feedback_context,
+                           inference_messages, add_feedback_arguments, feedback_prompt_config)
 from run_full_recipe import instruction_texts
 
 
-SYSTEM_PROMPT = (
-    'You are a proactive cooking assistant watching a video stream. '
-    'Follow only the current recipe step supplied by the user. '
-    'Stay silent when no intervention is needed. When speaking, output exactly '
-    'one message: "Feedback: <brief corrective feedback>" if a visible mistake '
-    'directly interferes with the current instruction, or '
-    '"Success: <brief confirmation>" if the entire current step is complete. '
-    'Do not announce completion prematurely or invent the next recipe step. '
-    'Do not repeat feedback for an unchanged mistake.'
-)
-
-
-def parse_event(text):
-    """Unclassified speech is logged, never guessed to be feedback or success."""
+def parse_event(text, stage='completion'):
+    """Share YES/NO parsing and serialization; silence is not a negative answer."""
     if not text.strip():
         return None
-    match = re.fullmatch(r'(Feedback|Success):\s*([^\n]+)', text.strip())
-    if not match or not match[2].strip():
-        raise ValueError('Expected one nonempty Feedback: or Success: message')
-    if re.search(r'\b(?:Feedback|Success|Instruct):', match[2]):
-        raise ValueError('Multiple events in one response')
-    return match[1] + ': ' + match[2].strip()
+    if stage not in ('completion', 'mistake'):
+        raise ValueError('Unknown stage: ' + stage)
+    field = 'completed' if stage == 'completion' else 'mistake'
+    return prediction_event(check_response(text, field), field)
+
 
 
 def generate_until_eos(model, embeds, past, threshold):
@@ -118,28 +107,41 @@ class ProAssistBackend:
     def reset(self, instruction):
         self.past = self.last = None
         self.first = True
-        self.pending = [{'role': 'system', 'content': SYSTEM_PROMPT},
-                        {'role': 'user', 'content': instruction}]
-        self.runner.initial_sys_prompt = SYSTEM_PROMPT
-        self.runner.knowledge = 'Task knowledge: Current recipe step: ' + instruction
+        self.recent = []
+        self.set_instruction(instruction)
         self.runner.init_key_values_to_keep = None
         self.model.last_not_talk_prob = None
 
     def set_instruction(self, instruction):
-        self.pending = [{'role': 'user', 'content': instruction}]
+        self.instruction = instruction
+        self.recent = []
+        # Keep the same completion task in the upstream summary continuation.
+        self.runner.initial_sys_prompt = prompt_for('completion', instruction, 0, [])
         self.runner.knowledge = 'Task knowledge: Current recipe step: ' + instruction
 
-    def step(self, rgb, timestamp):
+    def _query(self, rgb, timestamp, stage):
+        began = time.monotonic()
         torch = self.torch
         import numpy as np
-        rgb = np.asarray(resize_frame(rgb, getattr(self.args, 'max_side', 448)))
-        messages = self.pending
-        ids, input_str = self.runner.processor.get_input_sequence(1, messages, self.first)
-        self.first, self.pending = False, []
-        # The official vision encoder expects raw RGB values in 0..255, NCHW.
-        images = torch.from_numpy(rgb.copy()).permute(2, 0, 1).unsqueeze(0).float()
-        inputs = self.runner.processor.add_last_assistant_message(
-            {'input_ids': ids, 'images': images}, self.last)
+        prompt = prompt_for(stage, self.instruction, timestamp, self.recent,
+                            self.args.mistake_prompt,
+                            explicit_dedup=self.args.feedback_dedup_rule == 'explicit',
+                            silent_negative=True)
+        # Use the shared role arrangement. mmassist accepts string message content,
+        # while the Qwen helper represents its final text as a multimodal block.
+        messages = inference_messages([], prompt, self.instruction, self.recent,
+                                      assistant_feedback=self.args.assistant_feedback)
+        messages = [dict(m, content=(''.join(block['text'] for block in m['content'])
+                                    if isinstance(m['content'], list) else m['content']))
+                    for m in messages]
+        ids, input_str = self.runner.processor.get_input_sequence(
+            int(rgb is not None), messages, self.first)
+        self.first = False
+        inputs = {'input_ids': ids}
+        if rgb is not None:
+            rgb = np.asarray(resize_frame(rgb, self.args.max_side))
+            inputs['images'] = torch.from_numpy(rgb.copy()).permute(2, 0, 1).unsqueeze(0).float()
+        inputs = self.runner.processor.add_last_assistant_message(inputs, self.last)
         inputs = {k: v.to(self.model.device, self.model.dtype) if v.is_floating_point()
                   else v.to(self.model.device) for k, v in inputs.items()}
         with torch.inference_mode():
@@ -152,20 +154,46 @@ class ProAssistBackend:
             else:
                 output, self.past = generate_until_eos(
                     self.model, embeds, self.past, self.args.not_talk_threshold)
-            output = output.clone()  # Summary generation reuses the upstream output buffer.
-            raw = self.tokenizer.decode(output[0])
-            cleaned, role = self.runner.processor.cleanup_text(raw)
+            output = output.clone()
+            decoded = self.tokenizer.decode(output[0])
+            cleaned, role = self.runner.processor.cleanup_text(decoded)
             self.last = (output[:, -1:].clone()
                          if self.tokenizer.img_sep_token_id is not None else None)
-            # Upstream summary management needs only these two frame attributes.
-            frame = SimpleNamespace(model_inputs=inputs, num_frames=1)
-            if self.args.context_length:
-                self.past, self.last = self.runner.manage_kv_cache(frame, self.past, self.last)
-        return dict(raw_response=raw, text=cleaned, role=role,
+            # Summary runs after both stages so mistake checks retain this frame.
+        field = 'completed' if stage == 'completion' else 'mistake'
+        parsed, error, event = None, None, None
+        if cleaned.strip():
+            try:
+                if role not in (None, 'assistant'):
+                    raise ValueError('Generated role is not assistant')
+                parsed = check_response(cleaned, field)
+                event = prediction_event(parsed, field)
+            except ValueError as exc:
+                error = str(exc)
+        return dict(stage=stage, prompt=prompt, raw_response=cleaned,
+                    decoded_response=decoded, role=role, parsed=parsed,
+                    parse_error=error, accepted=event,
                     generated_tokens=output.shape[1],
                     hit_token_limit=bool(self.args.max_new_tokens and output.shape[1] >= self.args.max_new_tokens
                                      and output[0, -1].item() != self.model.config.eos_token_id),
-                    input_str=input_str, input_messages=messages)
+                    input_str=input_str, input_messages=messages,
+                    latency_seconds=time.monotonic() - began), inputs
+
+    def step(self, rgb, timestamp):
+        self.recent = feedback_context(self.recent, timestamp)
+        completion, frame_inputs = self._query(rgb, timestamp, 'completion')
+        responses = [completion]
+        if completion['parsed'] is not None and not completion['parsed']['completed']:
+            mistake, _ = self._query(None, timestamp, 'mistake')
+            responses.append(mistake)
+            if mistake['accepted']:
+                self.recent.append({'time': timestamp,
+                                    'feedback': mistake['parsed']['feedback'].strip()})
+        if self.args.context_length:
+            frame = SimpleNamespace(model_inputs=frame_inputs, num_frames=1)
+            with self.torch.inference_mode():
+                self.past, self.last = self.runner.manage_kv_cache(frame, self.past, self.last)
+        return dict(responses=responses)
 
     def close(self):
         self.temp.cleanup()
@@ -223,19 +251,16 @@ def run_video(sample, args, backend, cap, log):
         # Never attach an event timestamp earlier than instruction injection.
         timestamp = requested
         response = (backend.step(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), timestamp)
-                    if backend else dict(raw_response='', text='', input_messages=[]))
-        event, error = None, None
-        try:
-            if response.get('role') not in (None, 'assistant'):
-                raise ValueError('Generated role is not assistant')
-            event = parse_event(response['text'])
-        except ValueError as exc:
-            error = str(exc)
-        log.write(json.dumps(dict(step_id=step_id, timestamp=timestamp,
-            frame_index=index, frame_timestamp=index / fps,
-            instruction=steps[step_id]['instruction'], accepted=event,
-            parse_error=error, **response), ensure_ascii=False) + '\n')
-        log.flush()
+                    if backend else dict(responses=[dict(stage='completion', raw_response='',
+                        decoded_response='', parsed=None, parse_error=None, accepted=None)]))
+        event = None
+        for stage_response in response['responses']:
+            event = stage_response['accepted']
+            log.write(json.dumps(dict(step_id=step_id, timestamp=timestamp,
+                frame_index=index, frame_timestamp=index / fps, frame_timestamps=[index / fps],
+                instruction=steps[step_id]['instruction'], **stage_response),
+                ensure_ascii=False) + '\n')
+            log.flush()
         tick += 1
         if event:
             append(event, timestamp)
@@ -265,6 +290,8 @@ def main():
     p.add_argument('--protocol', choices=('per_recipe_step', 'full_recipe'), default='per_recipe_step')
     add_visual_arguments(p, include_frame_limit=False)
     p.set_defaults(sample_fps=2)
+    p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed')
+    add_feedback_arguments(p)
     p.add_argument('--not-talk-threshold', type=float, default=0.3)
     p.add_argument('--context-length', type=int, default=4096, help='Streaming token context budget; 0 disables upstream progress summarization')
     p.add_argument('--device-index', type=int, default=0)
@@ -289,13 +316,25 @@ def main():
     args.output_dir.mkdir(parents=True, exist_ok=args.overwrite or args.continue_run)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}
     config.update(implementation='local_proassist_adapter', paper_exact_reproduction=False,
-                  response_mapping='strict_tagged_speech_no_helper_llm', system_prompt=SYSTEM_PROMPT,
+                  response_mapping='shared_yes_no_completion_then_mistake',
+                  response_format='YES_NO',
+                  success_message_policy='fixed_confirmation_reason_logged_only',
+                  task_prompt_policy='shared_prompt_for_each_frame_native_silence_not_NO',
+                  completion_prompt_template=prompt_for('completion', '[recipe_step]', 0, []),
+                  feedback_history_policy='current_step_last_60s_exact_text_dedup_latest',
                   context_handling='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',
                   context_frame_limit=None, historical_frame_policy='incremental_kv_with_generated_dialogue',
                   summary_reserved_tokens=max(128, args.max_new_tokens + 32), offline=True,
                   reference='https://github.com/pro-assist/ProAssist',
                   instruction_timestamps_used=args.protocol == 'per_recipe_step',
                   feedback_and_success_labels_used=False)
+    config.update(feedback_prompt_config(args))
+    if config['mistake_dedup_rule']:
+        config['mistake_dedup_rule'] = config['mistake_dedup_rule'].replace(
+            'answer NO', 'remain silent and generate no textual response')
+    config.update(mistake_negative_policy='native_silence',
+                  prompt_version=config['prompt_version'] + '_mistake_silence_v1',
+                  paper_prompt_verbatim=False)
     save_json(args.output_dir / 'config.json', config)
     backend = None
     try:

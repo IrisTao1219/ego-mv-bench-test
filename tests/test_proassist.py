@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from evaluate_official import validate_predictions
 from run_proassist import ProAssistBackend, parse_event, run_video
+from run_inference import check_response, prediction_event, prompt_for
 
 
 class ProAssistTests(unittest.TestCase):
@@ -33,7 +34,19 @@ class ProAssistTests(unittest.TestCase):
                 self.messages.append(('next', instruction))
             def step(self, rgb, timestamp):
                 text = next(self.replies, '')
-                return dict(raw_response=text, text=text)
+                # Script speech at the task level; parsing is shared with Qwen.
+                stage = 'mistake' if text.startswith('Feedback:') else 'completion'
+                raw = ('YES. ' + text.split(':', 1)[1].strip()
+                       if text.startswith(('Feedback:', 'Success:')) else text)
+                field = 'mistake' if stage == 'mistake' else 'completed'
+                parsed, error = None, None
+                try:
+                    parsed = check_response(raw, field) if raw.strip() else None
+                except ValueError as exc:
+                    error = str(exc)
+                event = prediction_event(parsed, field) if parsed else None
+                return dict(responses=[dict(stage=stage, raw_response=raw, parsed=parsed,
+                                           parse_error=error, accepted=event)])
         backend = None if dry else Backend()
         args = SimpleNamespace(protocol=protocol, sample_fps=2, max_seconds=0, dry_run=dry)
         log = io.StringIO()
@@ -54,7 +67,7 @@ class ProAssistTests(unittest.TestCase):
 
     def test_malformed_speech_never_advances(self):
         result, logs, backend = self.run_sample(replies=['Great job!', 'Success:',
-            'Success: done Feedback: more', 'Feedback: Fix it.'])
+            'Perhaps it is done', 'Feedback: Fix it.'])
         self.assertEqual(result['pred_texts'], ['Instruct: FIRST', 'Feedback: Fix it.'])
         self.assertTrue(all(row['step_id'] == 0 for row in logs))
         self.assertIsNotNone(logs[0]['parse_error'])
@@ -83,12 +96,47 @@ class ProAssistTests(unittest.TestCase):
         self.assertEqual([r['frame_index'] for r in logs], list(range(160)))
         self.assertEqual(backend.messages, [('reset', 'FIRST')])
 
-    def test_strict_event_parser(self):
+    def test_shared_yes_no_event_parser(self):
         self.assertIsNone(parse_event('  '))
-        self.assertEqual(parse_event('Feedback: Add salt.'), 'Feedback: Add salt.')
-        for text in ['NO', 'Success:', 'Success: done\nFeedback: fix', 'Instruct: next']:
+        self.assertIsNone(parse_event('NO'))
+        self.assertEqual(parse_event('YES. Add salt.', 'mistake'), 'Feedback: Add salt.')
+        self.assertEqual(parse_event('YES. Both eggs are in the bowl.'),
+                         'Success: Step complete.')
+        for text in ['Great job!', 'YES', 'Feedback: Add salt.', 'Instruct: next']:
             with self.assertRaises(ValueError):
                 parse_event(text)
+
+    def test_mistake_silence_prompt_has_no_conflicting_NO_rule(self):
+        for variant in ('detailed', 'simple'):
+            for dedup in (False, True):
+                prompt = prompt_for('mistake', 'FIRST', 0, [], variant, dedup,
+                                    silent_negative=True)
+                self.assertIn('remain silent', prompt)
+                self.assertIn('YES. <feedback>', prompt)
+                self.assertNotIn('answer NO', prompt)
+                self.assertNotIn('else ‘No’', prompt)
+                self.assertIn('else ‘No’', prompt_for('mistake', 'FIRST', 0, [], variant, dedup))
+        self.assertEqual(prompt_for('completion', 'FIRST', 0, [], silent_negative=True),
+                         prompt_for('completion', 'FIRST', 0, []))
+        self.assertIsNone(parse_event('', 'mistake'))
+
+    def test_silence_and_bad_completion_do_not_trigger_mistake_check(self):
+        import torch
+        from unittest.mock import Mock
+        for raw in ('', 'Great job!'):
+            backend = ProAssistBackend.__new__(ProAssistBackend)
+            backend.torch = torch
+            backend.args = SimpleNamespace(context_length=4096)
+            backend.recent = [{'time': 0, 'feedback': 'old feedback'}]
+            completion = dict(parsed=None, accepted=None, raw_response=raw)
+            backend._query = Mock(return_value=(completion, {'images': 'frame'}))
+            backend.past, backend.last = 'old-cache', 'old-last'
+            backend.runner = SimpleNamespace(manage_kv_cache=Mock(
+                return_value=('summary-cache', 'summary-message')))
+            self.assertEqual(backend.step('rgb', 61)['responses'], [completion])
+            backend._query.assert_called_once_with('rgb', 61, 'completion')
+            self.assertEqual(backend.recent, [])
+            self.assertEqual((backend.past, backend.last), ('summary-cache', 'summary-message'))
 
     def test_backend_checkpoint_paths_and_stream_cache(self):
         import torch
@@ -108,10 +156,11 @@ class ProAssistTests(unittest.TestCase):
         def add_last(inputs, last):
             calls.append(('last', None if last is None else last.clone()))
             return inputs
+        cleaned_replies = iter(['NO', 'YES. Fix it.', 'YES. Done.'])
         processor = SimpleNamespace(
             get_input_sequence=lambda n, messages, first: (torch.tensor([[1]]), str(messages)),
             add_last_assistant_message=add_last,
-            cleanup_text=lambda raw: ('Feedback: Fix it.', 'assistant'))
+            cleanup_text=lambda raw: (next(cleaned_replies), 'assistant'))
         def manage(frame, past, last):
             self.assertEqual(frame.model_inputs['images'].shape, (1, 3, 8, 8))
             # Simulate upstream summary overwriting the shared generation buffer.
@@ -142,7 +191,9 @@ class ProAssistTests(unittest.TestCase):
             args = SimpleNamespace(proassist_root=None, model_path=root/'adapter',
                 base_model_path=root/'base', vision_model_path=root/'encoder',
                 attn_implementation='sdpa', device_index=0, sample_fps=2,
-                context_length=4096, max_new_tokens=100, not_talk_threshold=.3)
+                context_length=4096, max_new_tokens=100, not_talk_threshold=.3,
+                max_side=448, mistake_prompt='detailed', feedback_dedup_rule='explicit',
+                assistant_feedback=True)
             modules = {
                 'mmassist': SimpleNamespace(),
                 'mmassist.model': SimpleNamespace(build_from_checkpoint=build),
@@ -157,11 +208,19 @@ class ProAssistTests(unittest.TestCase):
                     first = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), 0)
                     backend.set_instruction('SECOND')
                     second = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), .5)
-                    self.assertEqual(first['raw_response'], '[5, 6]')
-                    self.assertFalse(first['hit_token_limit'])
-                    self.assertEqual(second['input_messages'], [{'role': 'user', 'content': 'SECOND'}])
-                    self.assertEqual(calls[3][1], 'managed-cache')
-                    self.assertEqual(calls[2][1].tolist(), [[6]])
+                    stages = first['responses']
+                    self.assertEqual([r['stage'] for r in stages], ['completion', 'mistake'])
+                    self.assertEqual(stages[0]['decoded_response'], '[5, 6]')
+                    self.assertEqual(stages[0]['raw_response'], 'NO')
+                    self.assertFalse(stages[0]['hit_token_limit'])
+                    self.assertEqual(stages[1]['accepted'], 'Feedback: Fix it.')
+                    self.assertEqual(second['responses'][0]['accepted'], 'Success: Step complete.')
+                    self.assertEqual(stages[0]['input_messages'], [{'role': 'user',
+                        'content': prompt_for('completion', 'FIRST', 0, [])}])
+                    self.assertEqual(stages[1]['prompt'], prompt_for('mistake', 'FIRST', 0, [], silent_negative=True))
+                    generated = [c for c in calls if c[0] == 'generate']
+                    self.assertEqual([c[1] for c in generated], [None, 'cache', 'managed-cache'])
+                    self.assertEqual([c for c in calls if c[0] == 'last'][1][1].tolist(), [[6]])
                     self.assertEqual((root/'adapter/config.json').read_text(), original)
                 finally:
                     backend.close()

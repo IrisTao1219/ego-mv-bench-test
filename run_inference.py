@@ -6,7 +6,7 @@ import math
 import os
 import re
 
-from prompts import DEDUP_RULE, COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
+from prompts import SILENT_MISTAKE_RESPONSE, DEDUP_RULE, COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
 from pathlib import Path
 import time
 
@@ -88,7 +88,8 @@ def check_response(raw, field):
 
 
 
-def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed', explicit_dedup=True):
+def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed', explicit_dedup=True,
+               silent_negative=False):
     """Fill paper placeholders and append the local mistake deduplication rule."""
     if stage == 'completion':
         template = COMPLETION_PROMPT
@@ -103,8 +104,13 @@ def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed', expli
     feedbacks = [entry['feedback'] for entry in recent]
     prompt = template.replace('[prev_detected_mistakes]', json.dumps(feedbacks, ensure_ascii=False)).replace(
         '[recipe_step]', instruction)
-    if stage == 'mistake' and explicit_dedup:
-        prompt += '\n\n' + DEDUP_RULE
+    if stage == 'mistake':
+        if silent_negative:
+            prompt = prompt[:prompt.index('If you observe a mistake answer')] + SILENT_MISTAKE_RESPONSE
+        if explicit_dedup:
+            rule = (DEDUP_RULE.replace('answer NO', 'remain silent and generate no textual response')
+                    if silent_negative else DEDUP_RULE)
+            prompt += '\n\n' + rule
     return prompt
 
 

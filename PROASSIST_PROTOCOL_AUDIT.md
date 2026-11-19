@@ -32,9 +32,9 @@ ProAssist 自身论文、训练配置、演示 notebook 的设置，不自动等
 | 完整食谱 | 正文规定视频连续；当前仅按有效 Success 切换指令 | 连续视频有依据；注入/切换细节待确认 |
 | 输入标签 | 当前不提供参考 Feedback、Success 或用户对话 | 用户对话是否输入的表 3 实际设置待确认 |
 | 权重 | 支持 I1/I5/I10，实际用户日志每帧有 5 个 image token | 表 3 采用哪种 checkpoint 尚未确认 |
-| 系统提示 | 当前 SYSTEM_PROMPT 是本地自拟内容 | 明确不一致，不能作为作者原文 |
-| 当前步骤角色 | 当前直接作为 user 消息传入 | 没有表 3 对应依据；不能声称正确 |
-| 输出映射 | 当前强制 Feedback:/Success:；拒绝其他自然语言 | 本地自拟协议，不能代表作者语义映射 |
+| 任务提示 | 移除旧 SYSTEM_PROMPT，直接复用轮询基线 prompt_for 的附录 D 提示 | 与本地 Qwen 一致；未确认表 3 的 ProAssist 采用此提示 |
+| 当前步骤角色 | 通过共享 inference_messages 构造 user/assistant 历史，mmassist 仅转换消息内容容器 | 与本地 Qwen 角色安排一致；无表 3 对应依据 |
+| 输出映射 | 复用 check_response/prediction_event：完成 YES 固定确认，错误 YES 保留反馈；静默不视为 NO | 与本地 Qwen 一致；未确认作者语义映射 |
 | 采样频率 | 当前默认 2 FPS，参考 ProAssist 演示 | 表 3 数值尚未确认 |
 | 静默阈值 | 当前默认 0.3，参考 ProAssist 演示 | 表 3 数值及选择方法尚未确认 |
 | 上下文 | 当前默认 4096、调用官方 summarize_and_drop；逐帧累积 KV cache，无均匀 32 帧截取 | 表 3 策略尚未确认 |
