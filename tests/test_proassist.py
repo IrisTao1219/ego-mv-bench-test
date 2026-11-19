@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from evaluate_official import validate_predictions
-from run_proassist import ProAssistBackend, parse_event, run_video, system_rules, cache_tokens
+from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens, check_proassist_response
 from run_inference import check_response, prediction_event, prompt_for
 
 
@@ -106,6 +106,18 @@ class ProAssistTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 parse_event(text)
 
+    def test_proassist_case_tolerance_does_not_change_shared_parser(self):
+        for negative in ('NO', 'No', 'no', 'nO, not yet.'):
+            self.assertFalse(check_proassist_response(negative, 'completed')['completed'])
+        for positive in ('YES. Done.', 'Yes, Done.', 'yes: Done.'):
+            self.assertEqual(parse_event(positive), 'Success: Step complete.')
+        self.assertEqual(parse_event('yes. Add salt.', 'mistake'), 'Feedback: Add salt.')
+        for invalid in ('Not yet', 'Nobody', 'Yesterday', 'Yes'):
+            with self.assertRaises(ValueError):
+                parse_event(invalid)
+        with self.assertRaises(ValueError):
+            check_response('No', 'completed')
+
     def test_mistake_silence_prompt_has_no_conflicting_NO_rule(self):
         for variant in ('detailed', 'simple'):
             for dedup in (False, True):
@@ -140,16 +152,6 @@ class ProAssistTests(unittest.TestCase):
         self.assertEqual(cache_tokens(None), 0)
         self.assertEqual(cache_tokens(((torch.zeros(1, 2, 19, 3), None),)), 19)
         self.assertEqual(cache_tokens(SimpleNamespace(get_seq_length=lambda: 27)), 27)
-        args = SimpleNamespace(mistake_prompt='detailed', feedback_dedup_rule='explicit')
-        rules = system_rules(args, 'mistake')
-        completion_rules = system_rules(args, 'completion')
-        self.assertIn(prompt_for('completion', '[recipe_step]', 0, []), completion_rules)
-        self.assertNotIn('remain silent', completion_rules)
-        self.assertNotIn('Has the person already completed', rules)
-        self.assertIn('[prev_detected_mistakes]', rules)
-        self.assertIn('remain silent', rules)
-        self.assertNotIn('mistakes:[]', rules)
-
     def test_backend_checkpoint_paths_and_stream_cache(self):
         import torch
         import numpy as np
@@ -169,7 +171,7 @@ class ProAssistTests(unittest.TestCase):
         def add_last(inputs, last):
             calls.append(('last', None if last is None else last.clone()))
             return inputs
-        cleaned_replies = iter(['NO', 'YES. Fix it.', 'YES. Done.'])
+        cleaned_replies = iter(['No', 'Yes. Fix it.', 'yes. Done.'])
         processor = SimpleNamespace(
             get_input_sequence=lambda n, messages, first: (torch.tensor([[1]]), str(messages)),
             add_last_assistant_message=add_last,
@@ -224,18 +226,16 @@ class ProAssistTests(unittest.TestCase):
                     stages = first['responses']
                     self.assertEqual([r['stage'] for r in stages], ['completion', 'mistake'])
                     self.assertEqual(stages[0]['decoded_response'], '[5, 6]')
-                    self.assertEqual(stages[0]['raw_response'], 'NO')
+                    self.assertEqual(stages[0]['raw_response'], 'No')
                     self.assertFalse(stages[0]['hit_token_limit'])
                     self.assertEqual(stages[1]['accepted'], 'Feedback: Fix it.')
                     self.assertEqual(second['responses'][0]['accepted'], 'Success: Step complete.')
-                    self.assertEqual([m['role'] for m in stages[0]['input_messages']], ['system', 'user'])
-                    self.assertEqual(stages[0]['input_messages'][0]['content'], system_rules(args, 'completion'))
-                    self.assertIn('recipe_step: FIRST', stages[0]['prompt'])
-                    self.assertIn('Active check: mistake', stages[1]['prompt'])
-                    self.assertEqual(stages[1]['input_messages'][0],
-                                     {'role': 'system', 'content': system_rules(args, 'mistake')})
-                    self.assertNotIn('system', [m['role'] for m in second['responses'][0]['input_messages']])
-                    self.assertIn('recipe_step: SECOND', second['responses'][0]['prompt'])
+                    self.assertEqual(stages[0]['input_messages'], [{'role': 'user',
+                        'content': prompt_for('completion', 'FIRST', 0, [])}])
+                    self.assertEqual(stages[1]['input_messages'], [{'role': 'user',
+                        'content': prompt_for('mistake', 'FIRST', 0, [])}])
+                    self.assertEqual(second['responses'][0]['prompt'],
+                                     prompt_for('completion', 'SECOND', .5, []))
                     self.assertEqual(stages[0]['not_talk_probability'], .25)
                     self.assertEqual(stages[0]['kv_cache_tokens_before'], 0)
                     generated = [c for c in calls if c[0] == 'generate']
