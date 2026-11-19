@@ -22,48 +22,29 @@ from run_full_recipe import instruction_texts
 
 def system_rules(args):
     """Reuse mistake definitions without the polling YES/NO question contract."""
-    if args.mistake_prompt == 'simple':
-        # Appendix D completion + simple mistake prompts, adapted to one native
-        # stream: YES is reserved for completion, corrective speech has no YES.
-        return (
-            'You are an expert cooking assistant observing a person cook. '
-            'Use the current recipe step in the latest user message.\n\n'
-            'First check whether the person has completed the entire recipe step '
-            'from the video so far. If complete, begin with YES and briefly explain '
-            'the evidence for completion.\n\n'
-            'Otherwise, check whether the person is about to make or has made a '
-            'mistake that directly interferes with successful instruction completion. '
-            'Do not treat a partially completed step as a mistake. If a mistake is '
-            'visible, give concise corrective feedback directly to the person, '
-            'without starting with YES. Do not repeat feedback for the same mistake.\n\n'
-            'If neither complete nor visibly incorrect, remain silent. '
-            'Do not output NO, encouragement, or instructions for the next step.'
-        )
     rules = prompt_for('mistake', '[recipe_step]', 0, [], args.mistake_prompt,
                        explicit_dedup=False)
     rules = rules.split('Do not repeat previously detected mistakes.')[0]
     rules = rules.split('Assume the recipe step is still in progress.')[0].rstrip()
     return (
         'Use the current recipe step from the latest user message.\n\n'
-        'At each incoming frame, first determine whether the person has completed '
-        'the ENTIRE current recipe step based on the observed video and previous frames. '
-        'Completion detection is required even when no mistake has occurred. '
+        'Judge completion from the observed video and previous frames. '
         'Do not assume completion merely because the instruction was provided, '
         'and do not treat partial progress as completion.\n\n'
-        'If the entire step is visibly complete, speak now: begin your response with YES '
-        'and briefly explain the visible evidence supporting completion. '
-        'Do not remain silent when completion is visible. Do not introduce the next step.\n\n'
-        'Only if the step is not complete, check whether the person is about to make '
-        'or has already made a visible mistake that directly interferes with successful '
-        'completion. Use the following mistake definitions:\n\n' + rules
-        + '\n\nIf such a mistake is visible, provide concise corrective feedback directly '
-        'to the person. Do not begin corrective feedback with YES; YES is reserved '
+        + rules
+        + '\n\nDo not begin corrective feedback with YES; YES is reserved '
         'for completion of the entire current step. Do not repeat feedback for the '
-        'same unchanged mistake.\n\n'
-        'If the step is neither complete nor visibly incorrect, remain silent and '
-        'generate no text. Do not output NO, progress narration, encouragement, '
+        'same unchanged mistake. Do not output NO, progress narration, encouragement, '
         'or a repetition of the instruction. Do not invent or introduce the next recipe step.'
     )
+
+
+def instruction_prompt(instruction):
+    return ('Current recipe step: ' + instruction
+            + '\nHas the person already completed the entire current recipe step? '
+            'If complete, begin with YES and briefly explain the evidence. '
+            'Otherwise, provide corrective feedback only if a mistake is visible; '
+            'if not, remain silent.')
 
 
 def cache_tokens(past):
@@ -174,8 +155,8 @@ class ProAssistBackend:
         self.instruction = instruction
         # Full-recipe transitions append one instruction and preserve stream history.
         self.pending = getattr(self, 'pending', []) + [
-            {'role': 'user', 'content': 'Current recipe step: ' + instruction}]
-        self.runner.knowledge = 'Task knowledge: Current recipe step: ' + instruction
+            {'role': 'user', 'content': instruction_prompt(instruction)}]
+        self.runner.knowledge = 'Task knowledge: ' + instruction_prompt(instruction)
 
     def _query(self, rgb, timestamp):
         began = time.monotonic()
@@ -330,7 +311,7 @@ def main():
     p.add_argument('--protocol', choices=('per_recipe_step', 'full_recipe'), default='per_recipe_step')
     add_visual_arguments(p, include_frame_limit=False)
     p.set_defaults(sample_fps=1)
-    p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='simple')
+    p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed')
     p.add_argument('--not-talk-threshold', type=float, default=0.3)
     p.add_argument('--context-length', type=int, default=4096, help='Streaming token context budget; 0 disables upstream progress summarization')
     p.add_argument('--device-index', type=int, default=0)
@@ -359,11 +340,10 @@ def main():
                   response_mapping='leading_yes_case_insensitive_success_other_speech_feedback',
                   response_format='free_text_with_optional_yes_prefix',
                   success_message_policy='fixed_confirmation_original_response_logged',
-                  task_prompt_policy='system_rules_once_instruction_on_transition_frames_only_afterwards',
+                  task_prompt_policy='system_rules_once_user_instruction_and_completion_question_on_transition_frames_only_afterwards',
                   system_prompt=system_rules(args), message_structure='system_then_user_instruction_then_frames',
                   stage_context_policy='single_stream',
-                  prompt_version=('native_speech_appendix_d_simple_v4' if args.mistake_prompt == 'simple'
-                                  else 'native_speech_completion_first_yes_fixed_success_v3'), paper_prompt_verbatim=False,
+                  prompt_version='native_speech_user_completion_question_deduplicated_v5', paper_prompt_verbatim=False,
                   feedback_history_policy='native_generated_dialogue_kv_and_summary',
                   context_handling='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',
                   context_frame_limit=None, historical_frame_policy='incremental_kv_with_generated_dialogue',

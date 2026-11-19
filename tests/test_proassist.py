@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from evaluate_official import validate_predictions
-from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens, system_rules
+from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens, system_rules, instruction_prompt
 
 
 class ProAssistTests(unittest.TestCase):
@@ -177,11 +177,11 @@ class ProAssistTests(unittest.TestCase):
                     self.assertIsNone(third['accepted'])
                     self.assertEqual(first['input_messages'], [
                         {'role': 'system', 'content': system_rules(args)},
-                        {'role': 'user', 'content': 'Current recipe step: FIRST'}])
+                        {'role': 'user', 'content': instruction_prompt('FIRST')}])
                     self.assertEqual(second['input_messages'], [])
                     self.assertEqual(second['prompt'], '')
                     self.assertEqual(third['input_messages'], [
-                        {'role': 'user', 'content': 'Current recipe step: SECOND'}])
+                        {'role': 'user', 'content': instruction_prompt('SECOND')}])
                     self.assertEqual(first['not_talk_probability'], .25)
                     self.assertEqual(first['kv_cache_tokens_before'], 0)
                     generated = [c for c in calls if c[0] == 'generate']

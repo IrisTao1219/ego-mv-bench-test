@@ -24,7 +24,7 @@ CASES = [
 ]
 
 
-VARIANTS = ("full", "minimal", "few_shot", "paper_simple")
+VARIANTS = ("full", "minimal", "few_shot")
 MINIMAL_RULES = (
     "Determine whether the ENTIRE current recipe step is complete from the supplied state. "
     "If complete, output exactly YES. If incomplete, output exactly WAIT. "
@@ -33,8 +33,8 @@ MINIMAL_RULES = (
 
 
 def messages_for(instruction, state, variant="full"):
-    rules = (system_rules(SimpleNamespace(mistake_prompt="simple" if variant == "paper_simple" else "detailed"))
-             if variant in ("full", "paper_simple") else MINIMAL_RULES)
+    rules = (system_rules(SimpleNamespace(mistake_prompt="detailed"))
+             if variant == "full" else MINIMAL_RULES)
     messages = [{"role": "system", "content": rules}]
     if variant == "few_shot":
         messages += [
@@ -83,7 +83,7 @@ def main():
     p.add_argument("--model-path", type=Path, default=Path("../models/ProAssist-Model-L4096-I5"))
     p.add_argument("--vision-model-path", type=Path, default=Path("../models/siglip-so400m-patch14-384"))
     p.add_argument("--proassist-root", type=Path, default=Path("../ProAssist"))
-    p.add_argument("--output-dir", type=Path, default=Path("outputs/proassist-yes-paper-simple"))
+    p.add_argument("--output-dir", type=Path, default=Path("outputs/proassist-yes-text-controls"))
     p.add_argument("--variants", nargs="+", choices=VARIANTS, default=list(VARIANTS))
     p.add_argument("--device-index", type=int, default=0)
     p.add_argument("--max-new-tokens", type=int, default=100)
@@ -131,7 +131,7 @@ def main():
                 # Full prompt requires silence for these incomplete cases; controls require WAIT.
                 row["response_contract_pass"] = (
                     (row["leading_yes"] if row["expected_yes"] else not row["raw_response"])
-                    if row["variant"] in ("full", "paper_simple") else
+                    if row["variant"] == "full" else
                     (row["exact_yes"] if row["expected_yes"] else row["exact_wait"])) and not row["hit_token_limit"]
                 rows.append(row)
                 log.write(json.dumps(row) + "\n")
