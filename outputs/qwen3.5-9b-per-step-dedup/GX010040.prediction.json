@@ -1,0 +1,41 @@
+{
+  "video_id": "GX010040",
+  "pred_texts": [
+    "Instruct: Get two slices of bread.",
+    "Instruct: Put the bread slices in the toaster and toast until golden brown, usually for about 1 minute.",
+    "Feedback: You are only putting one slice of bread into the toaster, but the instruction requires putting in bread slices (plural), implying you should toast more than one.",
+    "Feedback: You are only putting one slice of bread into the toaster, but the instruction requires putting in bread slices (plural), implying you should toast more than one.",
+    "Instruct: Now add 2 tablespoons of pizza sauce on each slice.",
+    "Feedback: You are using a plastic knife to scoop the sauce, which is not ideal for spreading or scooping from a jar as it may not be sturdy enough or clean enough for food preparation; a metal spoon or spatula would be more appropriate.",
+    "Instruct: Now spread the sauce evenly on the toasts.",
+    "Feedback: You are cutting the toast instead of spreading the sauce on it.",
+    "Instruct: Now add shredded mozzarella on top of each of the slices to cover them evenly.",
+    "Feedback: You are reaching for the package of cheese, but the instruction requires you to add shredded mozzarella. You need to open the package and take out the shredded cheese to proceed with the step.",
+    "Feedback: You are struggling to open the package of cheese, but you need to successfully open it and take out the shredded mozzarella to proceed with the step.",
+    "Feedback: You are only sprinkling a small amount of shredded mozzarella on the slices, but the instruction requires you to cover them evenly. You need to add more cheese to ensure both slices are fully covered.",
+    "Instruct: Now you can add olives on top of each bread slice according to your taste.",
+    "Feedback: You are using a fork to pick up the olives, but you are not placing them on the bread slices as instructed. Instead, you are holding the jar and the fork over the bread without actually adding the olives to the pizza yet.",
+    "Instruct: Take a microwave safe plate or bowl, put the bread slices in it and microwave the slices for 40 to 45 seconds.",
+    "Feedback: You are placing the prepared bread slices onto a plate, but the instruction requires you to put the bread slices into a microwave-safe container (like the clear plastic tub visible on the left) before microwaving them. Using a standard paper plate for microwaving is incorrect.",
+    "Success: Step complete."
+  ],
+  "pred_timestamps": [
+    3.38,
+    14.568,
+    19.567999999999998,
+    24.567999999999998,
+    85.31,
+    100.31,
+    122.44,
+    127.44,
+    165.47,
+    170.47,
+    175.47,
+    185.47,
+    204.25,
+    209.25,
+    240.0,
+    245.0,
+    280.0
+  ]
+}

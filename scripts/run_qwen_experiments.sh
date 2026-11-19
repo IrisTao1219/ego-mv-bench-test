@@ -12,7 +12,7 @@ CUDA_VISIBLE_DEVICES=1 python run_inference.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking default \
-  --output-dir outputs/qwen3-vl-30b-per-step-explicit-dedup --continue &&
+  --output-dir outputs/qwen3-vl-30b-per-step-dedup-manual &&
 
 
 CUDA_VISIBLE_DEVICES=2 python run_inference.py \
@@ -60,7 +60,7 @@ CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
   --output-dir outputs/qwen3.5-27b-full-recipe-dedup &&
 
 
-CUDA_VISIBLE_DEVICES=3 python run_inference.py \
+CUDA_VISIBLE_DEVICES=2 python run_inference.py \
   --data-root ../datasets/ego-mc-bench \
   --model-path ../../Data/Hf_model/Qwen3.5-9B \
   --limit 0 \
@@ -72,12 +72,12 @@ CUDA_VISIBLE_DEVICES=3 python run_inference.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-9b-per-step-dedup &&
+  --output-dir outputs/qwen3.5-9b-per-step-dedup-manual &&
 
 CUDA_VISIBLE_DEVICES=2 python run_full_recipe.py \
   --data-root ../datasets/ego-mc-bench \
   --model-path ../../Data/Hf_model/Qwen3.5-9B \
-  --limit 0 \
+  --limit 0 \ß
   --interval 5 \
   --sample-fps 1 \
   --max-side 448 \
@@ -91,11 +91,11 @@ CUDA_VISIBLE_DEVICES=2 python run_full_recipe.py \
 
 python scripts/wait_for_gpu.py \
   --gpu 1 \
-  --min-free-mib 71680 \
+  --min-free-mib 21680 \
   --interval 5 \
-  -- python run_inference.py \
+  -- CUDA_VISIBLE_DEVICES=2 python run_inference.py \
   --data-root ../datasets/ego-mc-bench \
-  --model-path ../datasets/Hf_model/Qwen3.5-27B \
+  --model-path ../../Data/Hf_model/Qwen3.5-9B \
   --limit 0 \
   --interval 5 \
   --sample-fps 1 \
@@ -105,5 +105,5 @@ python scripts/wait_for_gpu.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule explicit \
   --thinking off \
-  --output-dir outputs/qwen3.5-27b-per-step-dedup
+  --output-dir outputs/qwen3.5-9b-per-step-dedup-manual
 

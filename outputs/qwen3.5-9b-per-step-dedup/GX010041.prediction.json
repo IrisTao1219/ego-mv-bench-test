@@ -1,0 +1,39 @@
+{
+  "video_id": "GX010041",
+  "pred_texts": [
+    "Instruct: Grab two slices of bread and put them in the toaster. Toast for around a minute.",
+    "Instruct: Now get the pizza sauce and spread two tablespoons on each slice of bread.",
+    "Feedback: You are using a knife to scoop the sauce from the jar instead of a spoon, which makes it difficult to measure the required two tablespoons accurately.",
+    "Instruct: Now spread it evenly on the bread.",
+    "Feedback: You are spreading the jam on the second slice of bread, but you are applying it unevenly and leaving large bare patches of bread uncovered. The instruction requires spreading it \"evenly,\" so you should ensure the entire surface of the bread is covered with a consistent layer.",
+    "Instruct: Now cover each slice of bread with shredded mozzarella cheese.",
+    "Feedback: You are currently spreading sauce on the bread, but the instruction requires you to cover the bread with shredded mozzarella cheese. You need to stop spreading the sauce and proceed to add the cheese.",
+    "Instruct: Add some oregano on top of the cheese toast according to your taste.",
+    "Feedback: You are currently adding oregano to the toast on the left, but you have already finished adding it to the toast on the right. You should add oregano to the second toast as well to ensure both are seasoned according to the recipe.",
+    "Feedback: You are currently adding oregano to the toast on the left, but you have already finished adding it to the toast on the right. You should add oregano to the second toast as well to ensure both are seasoned according to the recipe.",
+    "Instruct: Now add at least 3 to 4 olives to the top of the cheese toasts.",
+    "Feedback: You are currently adding seasoning (likely pepper or herbs) to the toasts, but the instruction specifically requires adding olives. You need to stop seasoning and proceed to place the olives on top of the cheese.",
+    "Instruct: Now microwave the cheese toast in a microwave-safe utensil for around 45 to 60 seconds.",
+    "Feedback: You are currently adding shredded cheese to the toast, but the instruction requires you to place the prepared cheese toast into a microwave-safe utensil and microwave it for 45 to 60 seconds. You need to finish assembling the toast and then transfer it to the microwave immediately.",
+    "Feedback: You are currently holding a plate over the toast, but the instruction requires you to place the prepared cheese toast into a microwave-safe utensil and microwave it for 45 to 60 seconds. You need to transfer the toast to the microwave-safe container immediately to proceed with the cooking step.",
+    "Success: Step complete."
+  ],
+  "pred_timestamps": [
+    1.0,
+    91.0,
+    96.0,
+    142.024,
+    147.024,
+    171.5,
+    176.5,
+    226.012,
+    241.012,
+    246.012,
+    256.0,
+    261.0,
+    313.024,
+    318.024,
+    323.024,
+    353.024
+  ]
+}
