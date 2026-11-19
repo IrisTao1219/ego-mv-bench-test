@@ -1,0 +1,207 @@
+Source: QualcommInteractiveCookingEvaluator, unmodified vendored evaluator
+Submitted videos: 20 / 39
+num_of_instructions: 562
+num_of_feedbacks: 397
+num_of_feedback_replies: 0
+num_of_instruction_clarifications: 26
+num_of_user_responses: 52
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 33.3
+mistake_tp:5, mistake_fp:15, mistake_tn:2, mistake_fn:2
+Mistake Accuracy: 0.29 -- Mistake Precision: 0.25 -- Mistake Recall: 0.71 -- Mistake F1_Score: 0.37 -- 
+Mistake Mean BERT Score: 0.295, Mistake Mean Rouge-L Score: 0.180
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 23.1
+mistake_tp:7, mistake_fp:28, mistake_tn:3, mistake_fn:5
+Mistake Accuracy: 0.23 -- Mistake Precision: 0.20 -- Mistake Recall: 0.58 -- Mistake F1_Score: 0.30 -- 
+Mistake Mean BERT Score: 0.298, Mistake Mean Rouge-L Score: 0.186
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 28.6
+mistake_tp:10, mistake_fp:40, mistake_tn:6, mistake_fn:9
+Mistake Accuracy: 0.25 -- Mistake Precision: 0.20 -- Mistake Recall: 0.53 -- Mistake F1_Score: 0.29 -- 
+Mistake Mean BERT Score: 0.319, Mistake Mean Rouge-L Score: 0.188
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 31.0
+mistake_tp:12, mistake_fp:56, mistake_tn:9, mistake_fn:9
+Mistake Accuracy: 0.24 -- Mistake Precision: 0.18 -- Mistake Recall: 0.57 -- Mistake F1_Score: 0.27 -- 
+Mistake Mean BERT Score: 0.326, Mistake Mean Rouge-L Score: 0.198
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 25.0
+mistake_tp:14, mistake_fp:81, mistake_tn:9, mistake_fn:10
+Mistake Accuracy: 0.20 -- Mistake Precision: 0.15 -- Mistake Recall: 0.58 -- Mistake F1_Score: 0.24 -- 
+Mistake Mean BERT Score: 0.316, Mistake Mean Rouge-L Score: 0.199
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 23.8
+mistake_tp:19, mistake_fp:114, mistake_tn:11, mistake_fn:10
+Mistake Accuracy: 0.19 -- Mistake Precision: 0.14 -- Mistake Recall: 0.66 -- Mistake F1_Score: 0.23 -- 
+Mistake Mean BERT Score: 0.332, Mistake Mean Rouge-L Score: 0.201
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 21.2
+mistake_tp:24, mistake_fp:180, mistake_tn:14, mistake_fn:12
+Mistake Accuracy: 0.17 -- Mistake Precision: 0.12 -- Mistake Recall: 0.67 -- Mistake F1_Score: 0.20 -- 
+Mistake Mean BERT Score: 0.349, Mistake Mean Rouge-L Score: 0.220
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 19.0
+mistake_tp:34, mistake_fp:350, mistake_tn:15, mistake_fn:13
+Mistake Accuracy: 0.12 -- Mistake Precision: 0.09 -- Mistake Recall: 0.72 -- Mistake F1_Score: 0.16 -- 
+Mistake Mean BERT Score: 0.343, Mistake Mean Rouge-L Score: 0.207
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 18.2
+mistake_tp:39, mistake_fp:364, mistake_tn:15, mistake_fn:13
+Mistake Accuracy: 0.13 -- Mistake Precision: 0.10 -- Mistake Recall: 0.75 -- Mistake F1_Score: 0.17 -- 
+Mistake Mean BERT Score: 0.327, Mistake Mean Rouge-L Score: 0.195
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 17.6
+mistake_tp:43, mistake_fp:378, mistake_tn:15, mistake_fn:15
+Mistake Accuracy: 0.13 -- Mistake Precision: 0.10 -- Mistake Recall: 0.74 -- Mistake F1_Score: 0.18 -- 
+Mistake Mean BERT Score: 0.323, Mistake Mean Rouge-L Score: 0.191
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 19.7
+mistake_tp:46, mistake_fp:383, mistake_tn:20, mistake_fn:20
+Mistake Accuracy: 0.14 -- Mistake Precision: 0.11 -- Mistake Recall: 0.70 -- Mistake F1_Score: 0.19 -- 
+Mistake Mean BERT Score: 0.324, Mistake Mean Rouge-L Score: 0.192
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 21.8
+mistake_tp:54, mistake_fp:404, mistake_tn:24, mistake_fn:21
+Mistake Accuracy: 0.16 -- Mistake Precision: 0.12 -- Mistake Recall: 0.72 -- Mistake F1_Score: 0.20 -- 
+Mistake Mean BERT Score: 0.321, Mistake Mean Rouge-L Score: 0.191
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 22.0
+mistake_tp:61, mistake_fp:432, mistake_tn:25, mistake_fn:22
+Mistake Accuracy: 0.16 -- Mistake Precision: 0.12 -- Mistake Recall: 0.73 -- Mistake F1_Score: 0.21 -- 
+Mistake Mean BERT Score: 0.319, Mistake Mean Rouge-L Score: 0.188
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 21.3
+mistake_tp:66, mistake_fp:447, mistake_tn:25, mistake_fn:22
+Mistake Accuracy: 0.16 -- Mistake Precision: 0.13 -- Mistake Recall: 0.75 -- Mistake F1_Score: 0.22 -- 
+Mistake Mean BERT Score: 0.317, Mistake Mean Rouge-L Score: 0.188
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 21.9
+mistake_tp:72, mistake_fp:460, mistake_tn:26, mistake_fn:24
+Mistake Accuracy: 0.17 -- Mistake Precision: 0.14 -- Mistake Recall: 0.75 -- Mistake F1_Score: 0.23 -- 
+Mistake Mean BERT Score: 0.315, Mistake Mean Rouge-L Score: 0.182
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 22.4
+mistake_tp:78, mistake_fp:475, mistake_tn:27, mistake_fn:24
+Mistake Accuracy: 0.17 -- Mistake Precision: 0.14 -- Mistake Recall: 0.76 -- Mistake F1_Score: 0.24 -- 
+Mistake Mean BERT Score: 0.311, Mistake Mean Rouge-L Score: 0.183
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 22.3
+mistake_tp:81, mistake_fp:552, mistake_tn:30, mistake_fn:30
+Mistake Accuracy: 0.16 -- Mistake Precision: 0.13 -- Mistake Recall: 0.73 -- Mistake F1_Score: 0.22 -- 
+Mistake Mean BERT Score: 0.312, Mistake Mean Rouge-L Score: 0.182
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 22.3
+mistake_tp:88, mistake_fp:586, mistake_tn:34, mistake_fn:34
+Mistake Accuracy: 0.16 -- Mistake Precision: 0.13 -- Mistake Recall: 0.72 -- Mistake F1_Score: 0.22 -- 
+Mistake Mean BERT Score: 0.309, Mistake Mean Rouge-L Score: 0.181
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 21.1
+mistake_tp:94, mistake_fp:623, mistake_tn:35, mistake_fn:39
+Mistake Accuracy: 0.16 -- Mistake Precision: 0.13 -- Mistake Recall: 0.71 -- Mistake F1_Score: 0.22 -- 
+Mistake Mean BERT Score: 0.306, Mistake Mean Rouge-L Score: 0.178
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 19.9
+mistake_tp:110, mistake_fp:728, mistake_tn:37, mistake_fn:41
+Mistake Accuracy: 0.16 -- Mistake Precision: 0.13 -- Mistake Recall: 0.73 -- Mistake F1_Score: 0.22 -- 
+Mistake Mean BERT Score: 0.295, Mistake Mean Rouge-L Score: 0.172
+>>>
+

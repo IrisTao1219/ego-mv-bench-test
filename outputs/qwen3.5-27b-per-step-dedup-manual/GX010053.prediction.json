@@ -25,7 +25,8 @@
     "Success: Step complete.",
     "Instruct: Now take a spoon and mix the pasta with the tomato garlic sauce thoroughly.",
     "Instruct: Now you can add the grated Parmesan cheese on top of the pasta. Add at least four tablespoons of grated Parmesan.",
-    "Instruct: Now mix the pasta and the cheese together."
+    "Instruct: Now mix the pasta and the cheese together.",
+    "Instruct: You can turn off the heat."
   ],
   "pred_timestamps": [
     1.0,
@@ -52,6 +53,7 @@
     1027.0,
     1028.0,
     1092.0,
-    1184.0
+    1184.0,
+    1207.0
   ]
 }
