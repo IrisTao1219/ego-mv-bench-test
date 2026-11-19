@@ -274,7 +274,7 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
 
 **协议核对状态：当前入口尚未与目标论文表 3 的全部设置对齐，不应使用其输出报告严格复现结果，也暂不建议继续全量跑分。** 系统提示、user 角色注入和前缀解析是本地自拟设置，真实短跑已发现模型提前续写后续步骤且无法生成有效事件。逐项差异及缺失原始设置见 [PROASSIST_PROTOCOL_AUDIT.md](PROASSIST_PROTOCOL_AUDIT.md)。以下命令目前仅供诊断；ProAssist 自身演示参数不等于目标论文评测参数。
 
-独立入口 `run_proassist.py` 使用 [ProAssist 官方代码](https://github.com/pro-assist/ProAssist) 的输入格式和静默判断。默认每帧输入一次（2 FPS，即 0.5 秒），RGB 先缩放到 224×224，再交给模型自己的视觉处理器。默认 `--context-length 0` 保留完整步骤 KV cache，不再摘要或丢弃历史；步骤切换时重置缓存。默认 `--max-new-tokens 0` 使用动态 token 缓冲区，按上游静默规则或 EOS 自然停止；显式设置正数则使用上游有界生成接口。静默阈值仍为 0.3，模型的视觉 token 数及 decision head 仍由权重配置决定。这些差异会记录在配置中，不能视为与 Qwen 完全相同的内部上下文。
+独立入口 `run_proassist.py` 使用 [ProAssist 官方代码](https://github.com/pro-assist/ProAssist) 的输入格式和静默判断。默认每秒采样并输入一帧（1 FPS），RGB 先缩放到 224×224，再交给模型自己的视觉处理器。默认 `--context-length 0` 保留完整步骤 KV cache，不再摘要或丢弃历史；步骤切换时重置缓存。默认 `--max-new-tokens 0` 使用动态 token 缓冲区，按上游静默规则或 EOS 自然停止；显式设置正数则使用上游有界生成接口。静默阈值仍为 0.3，模型的视觉 token 数及 decision head 仍由权重配置决定。这些差异会记录在配置中，不能视为与 Qwen 完全相同的内部上下文。
 
 请使用 **独立 Python 3.10 或 3.11 环境**。本项目提供 `requirements-proassist.txt` 推理候选依赖：保留用户已工作的 PyTorch 2.11.0+cu128 / torchvision 0.26.0+cu128，采用官方代码对应的 Transformers 4.43.1、PEFT 0.11.1；该新旧组合尚未在服务器上跑通真实模型，不是验证过的锁文件。不要安装本项目的 Qwen `requirements.txt`，也不要安装 ProAssist 官方整套旧版训练/演示依赖，后者会要求 torch 2.3.1，并包含锁定旧 torch 的 vLLM。
 

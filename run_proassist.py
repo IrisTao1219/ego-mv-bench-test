@@ -265,7 +265,7 @@ def main():
     p.add_argument('--base-model-path', type=Path)
     p.add_argument('--vision-model-path', type=Path, help='Vision model matching checkpoint vision_pretrained')
     p.add_argument('--protocol', choices=('per_recipe_step', 'full_recipe'), default='per_recipe_step')
-    p.add_argument('--sample-fps', type=float, default=2)
+    p.add_argument('--sample-fps', type=float, default=1)
     p.add_argument('--not-talk-threshold', type=float, default=0.3)
     p.add_argument('--context-length', type=int, default=0, help='0 = complete step cache; positive = summarize/drop budget')
     p.add_argument('--max-new-tokens', type=int, default=0, help='0 = EOS-only generation')

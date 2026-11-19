@@ -19,6 +19,7 @@
 | qwen3.5-27b-per-step-dedup-manual（未完成） | 20/39 | 24.8% | 2 | 1 | 53 | 149 | 0.27 | 0.67 | 0.01 | 0.03 | 0.410 | 0.337 |
 | qwen3.5-9b-per-step | 39/39 | 11.4% | 163 | 1191 | 38 | 234 | 0.12 | 0.12 | 0.41 | 0.19 | 0.336 | 0.191 |
 | qwen3.5-9b-per-step-dedup | 39/39 | 5.3% | 171 | 631 | 18 | 226 | 0.18 | 0.21 | 0.43 | 0.29 | 0.336 | 0.197 |
+| qwen3.5-9b-per-step-dedup-manual | 39/39 | 5.3% | 171 | 631 | 18 | 226 | 0.18 | 0.21 | 0.43 | 0.29 | 0.336 | 0.197 |
 
 #### full-recipe
 
@@ -43,6 +44,7 @@
 | qwen3.5-27b-per-step | 39/39 | 562 | 264 | 137 | 88 | 425 | 60.89% | 24.38% | 34.82% |
 | qwen3.5-27b-per-step-dedup-manual（未完成） | 20/39 | 254 | 141 | 58 | 41 | 196 | 58.59% | 22.83% | 32.86% |
 | qwen3.5-9b-per-step | 39/39 | 562 | 264 | 55 | 32 | 507 | 63.22% | 9.79% | 16.95% |
+| qwen3.5-9b-per-step-dedup-manual | 39/39 | 562 | 264 | 88 | 70 | 474 | 55.70% | 15.66% | 24.44% |
 
 #### full-recipe
 
@@ -65,6 +67,7 @@
 | qwen3.5-27b-per-step | 16.01% | 24.38% | 30.78% | 225 | -21.25 | 28.07 | 8.97 |
 | qwen3.5-27b-per-step-dedup-manual（未完成） | 16.14% | 22.83% | 31.50% | 99 | -13.98 | 23.03 | 10.90 |
 | qwen3.5-9b-per-step | 5.87% | 9.79% | 12.63% | 87 | -17.84 | 21.06 | 8.00 |
+| qwen3.5-9b-per-step-dedup-manual | 8.54% | 15.66% | 20.28% | 158 | -25.67 | 30.61 | 12.00 |
 
 #### full-recipe
 
@@ -87,6 +90,7 @@
 | qwen3.5-27b-per-step | 8/264 | 3.03% | 288 | 239 | 82.99% |
 | qwen3.5-27b-per-step-dedup-manual（未完成） | 0/141 | 0.00% | 4 | 0 | 0.00% |
 | qwen3.5-9b-per-step | 90/264 | 34.09% | 1735 | 1426 | 82.19% |
+| qwen3.5-9b-per-step-dedup-manual | 203/264 | 76.89% | 902 | 218 | 24.17% |
 
 #### full-recipe
 
@@ -111,6 +115,7 @@
 - [qwen3.5-27b-per-step-dedup-manual（未完成）](outputs/qwen3.5-27b-per-step-dedup-manual/report.txt)（20/39 视频）
 - [qwen3.5-27b-full-recipe（未完成）](outputs/qwen3.5-27b-full-recipe/report.txt)（7/39 视频）
 - [qwen3.5-9b-per-step](outputs/qwen3.5-9b-per-step/report.txt)（39/39 视频）
+- [qwen3.5-9b-per-step-dedup-manual](outputs/qwen3.5-9b-per-step-dedup-manual/report.txt)（39/39 视频）
 
 ---
 
