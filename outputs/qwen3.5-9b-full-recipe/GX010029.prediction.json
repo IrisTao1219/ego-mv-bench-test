@@ -1,0 +1,37 @@
+{
+  "video_id": "GX010029",
+  "pred_texts": [
+    "Instruct: Get a large pan and put it on the stove.",
+    "Success: Step complete.",
+    "Instruct: Switch on the stove and add 2 tablespoons of oil.",
+    "Feedback: You are adding oil to a pan that is not yet on the stove. You should switch on the burner first before adding the oil.",
+    "Feedback: You are adding oil to a pan that is not yet on the stove. You should switch on the burner first before adding the oil.",
+    "Feedback: You are adding oil to a pan that is not yet on the stove. You should switch on the burner first before adding the oil.",
+    "Feedback: You are adding oil to a pan that is not yet on the stove. You should switch on the burner first before adding the oil.",
+    "Feedback: You are adding oil to a pan that is not yet on the stove. You should switch on the burner first before adding the oil.",
+    "Feedback: You are adding oil to a pan that is already on the stove, but the instruction specifies to switch on the stove *after* adding the oil. You should add the oil to the cold pan first, then turn on the heat.",
+    "Feedback: You are adding oil to a pan that is already on the stove, but the instruction specifies to switch on the stove *after* adding the oil. You should add the oil to the cold pan first, then turn on the heat.",
+    "Feedback: You are adding oil to a pan that is already on the stove, but the instruction specifies to switch on the stove *after* adding the oil. You should add the oil to the cold pan first, then turn on the heat.",
+    "Feedback: You are adding oil to a pan that is already on the stove, but the instruction specifies to switch on the stove *after* adding the oil. You should add the oil to the cold pan first, then turn on the heat.",
+    "Feedback: You are adding oil to a pan that is already on the stove, but the instruction specifies to switch on the stove *after* adding the oil. You should add the oil to the cold pan first, then turn on the heat.",
+    "Feedback: You are adding oil to a pan that is already on the stove, but the instruction specifies to switch on the stove *after* adding the oil. You should add the oil to the cold pan first, then turn on the heat.",
+    "Feedback: You are adding oil to a pan that is already on the stove, but the instruction specifies to switch on the stove *after* adding the oil. You should add the oil to the cold pan first, then turn on the heat."
+  ],
+  "pred_timestamps": [
+    0.0,
+    5.0,
+    5.0,
+    80.0,
+    95.0,
+    110.0,
+    115.0,
+    120.0,
+    220.0,
+    225.0,
+    235.0,
+    270.0,
+    285.0,
+    315.0,
+    335.0
+  ]
+}
