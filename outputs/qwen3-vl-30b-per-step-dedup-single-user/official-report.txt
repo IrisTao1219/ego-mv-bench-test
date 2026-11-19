@@ -1,0 +1,47 @@
+Source: QualcommInteractiveCookingEvaluator, unmodified vendored evaluator
+Submitted videos: 4 / 39
+num_of_instructions: 562
+num_of_feedbacks: 397
+num_of_feedback_replies: 0
+num_of_instruction_clarifications: 26
+num_of_user_responses: 52
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 33.3
+mistake_tp:5, mistake_fp:25, mistake_tn:2, mistake_fn:2
+Mistake Accuracy: 0.21 -- Mistake Precision: 0.17 -- Mistake Recall: 0.71 -- Mistake F1_Score: 0.27 -- 
+Mistake Mean BERT Score: 0.321, Mistake Mean Rouge-L Score: 0.207
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 23.1
+mistake_tp:7, mistake_fp:37, mistake_tn:3, mistake_fn:5
+Mistake Accuracy: 0.19 -- Mistake Precision: 0.16 -- Mistake Recall: 0.58 -- Mistake F1_Score: 0.25 -- 
+Mistake Mean BERT Score: 0.315, Mistake Mean Rouge-L Score: 0.205
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 28.6
+mistake_tp:10, mistake_fp:49, mistake_tn:6, mistake_fn:9
+Mistake Accuracy: 0.22 -- Mistake Precision: 0.17 -- Mistake Recall: 0.53 -- Mistake F1_Score: 0.26 -- 
+Mistake Mean BERT Score: 0.324, Mistake Mean Rouge-L Score: 0.201
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 31.0
+mistake_tp:11, mistake_fp:69, mistake_tn:9, mistake_fn:10
+Mistake Accuracy: 0.20 -- Mistake Precision: 0.14 -- Mistake Recall: 0.52 -- Mistake F1_Score: 0.22 -- 
+Mistake Mean BERT Score: 0.330, Mistake Mean Rouge-L Score: 0.206
+>>>
+
