@@ -53,10 +53,10 @@ class ProAssistTests(unittest.TestCase):
         self.assertEqual(result, self.run_sample(replies=replies, times=[90, 100, 200])[0])
         self.assertNotIn('SECRET', json.dumps(logs))
 
-    def test_negative_speech_is_filtered_without_advancing(self):
+    def test_all_non_yes_speech_is_feedback_without_advancing(self):
         result, logs, backend = self.run_sample(replies=['Great job!', 'No', 'Not yet', 'Fix it.'])
         self.assertEqual(result['pred_texts'], ['Instruct: FIRST', 'Feedback: Great job!',
-                                              'Feedback: Fix it.'])
+                                              'Feedback: No', 'Feedback: Not yet', 'Feedback: Fix it.'])
         self.assertTrue(all(row['step_id'] == 0 for row in logs))
         self.assertTrue(all(row['parse_error'] is None for row in logs))
         self.assertEqual(backend.messages, [('reset', 'FIRST')])
@@ -91,7 +91,7 @@ class ProAssistTests(unittest.TestCase):
             self.assertEqual(parse_event(text), 'Success: Step complete.')
         for text in ('No', 'NO.', 'There is no mistake.', 'Not yet',
                      'Feedback: nOt YeT, mix it well.', 'not\nyet'):
-            self.assertIsNone(parse_event(text))
+            self.assertEqual(parse_event(text), 'Feedback: ' + text)
         for text in ('Now mix it.', 'Not ready.', 'Yesterday', 'Add salt.', 'I said yes earlier.'):
             self.assertEqual(parse_event(text), 'Feedback: ' + text)
         self.assertEqual(parse_event('  Add salt.\nUse a teaspoon.  '),

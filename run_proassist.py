@@ -63,14 +63,12 @@ def cache_tokens(past):
 
 
 def parse_event(text):
-    """Leading YES signals success; NO and NOT YET suppress feedback."""
+    """Leading YES signals success; all other nonempty speech is feedback."""
     text = text.strip()
     if not text:
         return None
     if re.match(r'^YES\b', text, re.IGNORECASE):
         return prediction_event({'completed': True}, 'completed')
-    if re.search(r'\b(?:NO|NOT\s+YET)\b', text, re.IGNORECASE):
-        return None
     return prediction_event({'mistake': True, 'feedback': text}, 'mistake')
 
 
@@ -343,13 +341,13 @@ def main():
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}
     config.update(implementation='local_proassist_adapter', paper_exact_reproduction=False,
                   task='native_proactive_speech',
-                  response_mapping='leading_yes_success_no_or_not_yet_suppressed_case_insensitive',
+                  response_mapping='leading_yes_case_insensitive_success_other_speech_feedback',
                   response_format='free_text_with_optional_yes_prefix',
                   success_message_policy='fixed_confirmation_original_response_logged',
                   task_prompt_policy='system_rules_once_user_instruction_and_completion_question_on_transition_frames_only_afterwards',
                   system_prompt=system_rules(args), message_structure='system_then_user_instruction_then_frames',
                   stage_context_policy='single_stream',
-                  prompt_version='native_speech_user_completion_question_negative_filter_v6', paper_prompt_verbatim=False,
+                  prompt_version='native_speech_user_completion_question_deduplicated_v5', paper_prompt_verbatim=False,
                   feedback_history_policy='native_generated_dialogue_kv_and_summary',
                   context_handling='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',
                   context_frame_limit=None, historical_frame_policy='incremental_kv_with_generated_dialogue',
