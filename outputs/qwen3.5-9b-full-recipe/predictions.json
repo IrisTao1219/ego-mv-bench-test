@@ -296,5 +296,18 @@
     "pred_timestamps": [
       0.0
     ]
+  },
+  {
+    "video_id": "GX010032",
+    "pred_texts": [
+      "Instruct: First, get a baguette and slice it into four half-inch thick pieces.",
+      "Success: Step complete.",
+      "Instruct: Now place the slices in a toaster or a toaster oven."
+    ],
+    "pred_timestamps": [
+      0.0,
+      205.0,
+      205.0
+    ]
   }
 ]
