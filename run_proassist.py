@@ -22,6 +22,15 @@ from run_inference import (load_samples, recipe_steps, save_json,
 from run_full_recipe import instruction_texts
 
 
+def system_rules(args, stage):
+    """Keep each check's shared rules in its own persistent system message."""
+    rules = prompt_for(stage, '[recipe_step]', 0, [], args.mistake_prompt,
+                       explicit_dedup=args.feedback_dedup_rule == 'explicit')
+    rules = rules.replace('mistakes:[]', 'mistakes:[prev_detected_mistakes]')
+    return ('Use recipe_step and prev_detected_mistakes from the latest user message.\n\n'
+            + rules)
+
+
 def cache_tokens(past):
     """Inspect legacy tuple caches and Transformers Cache objects without copying."""
     if past is None:
@@ -136,22 +145,26 @@ class ProAssistBackend:
         self.instruction = instruction
         self.recent = []
         for stage, state in self.states.items():
-            state['runner'].initial_sys_prompt = prompt_for(stage, instruction, 0, [],
-                self.args.mistake_prompt, explicit_dedup=self.args.feedback_dedup_rule == 'explicit')
+            state['runner'].initial_sys_prompt = system_rules(self.args, stage)
             state['runner'].knowledge = 'Task knowledge: Current recipe step: ' + instruction
 
     def _query(self, rgb, timestamp, stage, context_only=False):
         began = time.monotonic()
         torch = self.torch
         import numpy as np
-        prompt = prompt_for(stage, self.instruction, timestamp, self.recent,
-                            self.args.mistake_prompt,
-                            explicit_dedup=self.args.feedback_dedup_rule == 'explicit')
+        prompt = ('recipe_step: ' + self.instruction
+                  + '\nprev_detected_mistakes: ' + json.dumps(
+                      [item['feedback'] for item in self.recent], ensure_ascii=False)
+                  + ('\nHas the person already completed this recipe step?'
+                     if stage == 'completion' else
+                     '\nIs the person about to make or already making a mistake?'))
         messages = inference_messages([], prompt, self.instruction, self.recent,
                                       assistant_feedback=self.args.assistant_feedback)
         messages = [dict(m, content=(''.join(block['text'] for block in m['content'])
                                     if isinstance(m['content'], list) else m['content']))
                     for m in messages]
+        if self.first:
+            messages.insert(0, {'role': 'system', 'content': self.runner.initial_sys_prompt})
         cache_before = cache_tokens(self.past)
         ids, input_str = self.runner.processor.get_input_sequence(
             int(rgb is not None), messages, self.first)
@@ -365,7 +378,7 @@ def main():
                   response_mapping='shared_yes_no_case_insensitive_label',
                   response_format='YES_NO',
                   success_message_policy='fixed_confirmation_reason_logged_only',
-                  task_prompt_policy='shared_prompt_for_verbatim_user_message',
+                  task_prompt_policy='shared_rules_stage_system_once_dynamic_user',
                   stage_context_policy='independent_kv_and_summary_all_frames',
                   completion_label_case_sensitive=False, mistake_label_case_sensitive=False,
                   completion_prompt_template=prompt_for('completion', '[recipe_step]', 0, []),
@@ -377,6 +390,11 @@ def main():
                   instruction_timestamps_used=args.protocol == 'per_recipe_step',
                   feedback_and_success_labels_used=False)
     config.update(feedback_prompt_config(args))
+    config.update(system_prompts={stage: system_rules(args, stage)
+                                  for stage in ('completion', 'mistake')},
+                  message_structure='stage_system_once_user_query_optional_assistant_feedback',
+                  prompt_version=config['prompt_version'] + '_isolated_system_roles_v2',
+                  paper_prompt_verbatim=False)
     save_json(args.output_dir / 'config.json', config)
     backend = None
     try:

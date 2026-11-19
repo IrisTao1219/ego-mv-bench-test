@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from evaluate_official import validate_predictions
-from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens, check_proassist_response
+from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens, check_proassist_response, system_rules
 from run_inference import check_response, prediction_event, prompt_for
 
 
@@ -230,12 +230,16 @@ class ProAssistTests(unittest.TestCase):
                     self.assertFalse(stages[0]['hit_token_limit'])
                     self.assertEqual(stages[1]['accepted'], 'Feedback: Fix it.')
                     self.assertEqual(second['responses'][0]['accepted'], 'Success: Step complete.')
-                    self.assertEqual(stages[0]['input_messages'], [{'role': 'user',
-                        'content': prompt_for('completion', 'FIRST', 0, [])}])
-                    self.assertEqual(stages[1]['input_messages'], [{'role': 'user',
-                        'content': prompt_for('mistake', 'FIRST', 0, [])}])
-                    self.assertEqual(second['responses'][0]['prompt'],
-                                     prompt_for('completion', 'SECOND', .5, []))
+                    for response, stage in zip(stages, ('completion', 'mistake')):
+                        self.assertEqual([m['role'] for m in response['input_messages']], ['system', 'user'])
+                        self.assertEqual(response['input_messages'][0]['content'], system_rules(args, stage))
+                        self.assertIn('recipe_step: FIRST', response['prompt'])
+                    self.assertNotIn('mistakes occur', system_rules(args, 'completion').lower())
+                    self.assertNotIn('Has the person already completed', system_rules(args, 'mistake'))
+                    self.assertEqual([m['role'] for m in second['responses'][0]['input_messages']], ['user'])
+                    self.assertIn('recipe_step: SECOND', second['responses'][0]['prompt'])
+                    self.assertIn('YES', system_rules(args, 'completion'))
+                    self.assertIn('NO', system_rules(args, 'mistake'))
                     self.assertEqual(stages[0]['not_talk_probability'], .25)
                     self.assertEqual(stages[0]['kv_cache_tokens_before'], 0)
                     generated = [c for c in calls if c[0] == 'generate']

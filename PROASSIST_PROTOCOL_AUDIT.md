@@ -33,7 +33,7 @@ ProAssist 自身论文、训练配置、演示 notebook 的设置，不自动等
 | 输入标签 | 当前不提供参考 Feedback、Success 或用户对话 | 用户对话是否输入的表 3 实际设置待确认 |
 | 权重 | 支持 I1/I5/I10，实际用户日志每帧有 5 个 image token | 表 3 采用哪种 checkpoint 尚未确认 |
 | 任务提示 | 移除旧 SYSTEM_PROMPT，直接复用轮询基线 prompt_for 的附录 D 提示 | 与本地 Qwen 一致；未确认表 3 的 ProAssist 采用此提示 |
-| 当前步骤角色 | 完成/错误使用独立 KV cache 与摘要状态；user 提示正文恢复共享模板，assistant 使用近期已接受反馈 | 与本地 Qwen 提示消息一致；无表 3 对应依据 |
+| 当前步骤角色 | 完成/错误使用独立 KV cache 与摘要状态；system 注入本阶段共享规则，user 提供步骤与问题，assistant 使用近期已接受反馈 | 共享任务规则，但角色分工为本地适配；无表 3 对应依据 |
 | 输出映射 | ProAssist 专用层归一化开头 YES/NO 大小写后复用 check_response/prediction_event；静默不视为 NO | 与本地 Qwen 一致；未确认作者语义映射 |
 | 采样频率 | 当前默认 2 FPS，参考 ProAssist 演示 | 表 3 数值尚未确认 |
 | 静默阈值 | 当前默认 0.3，参考 ProAssist 演示 | 表 3 数值及选择方法尚未确认 |
