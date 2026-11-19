@@ -1,0 +1,43 @@
+{
+  "video_id": "GX010078",
+  "pred_texts": [
+    "Instruct: Let's get a medium sized onion, cut one quarter piece and chop it into very small pieces.",
+    "Success: Step complete.",
+    "Instruct: Now let's get a tomato and cut it into very small pieces.",
+    "Success: Step complete.",
+    "Instruct: Now let's put the chopped tomatoes and the onions into a microwave-safe bowl.",
+    "Success: Step complete.",
+    "Instruct: Now let's add chili flakes to the mixture.",
+    "Instruct: Now let's mix the tomatoes and onions together with the chilli flakes using a fork.",
+    "Instruct: Now let's get two pieces of bread and toast them in a toaster until they are golden and crispy. This usually takes about three minutes.",
+    "Success: Step complete.",
+    "Instruct: Now butter both pieces of toast.",
+    "Success: Step complete.",
+    "Instruct: Now let's add the vegetable mixture to the toasts. You can put two tablespoons on each slice.",
+    "Success: Step complete.",
+    "Instruct: Now let's put about two tablespoons of shredded cheese on each slice of toast.",
+    "Success: Step complete.",
+    "Instruct: Now microwave the toasts for about 30 seconds to slightly melt the cheese.",
+    "Success: Step complete."
+  ],
+  "pred_timestamps": [
+    1.0,
+    121.0,
+    134.0,
+    219.0,
+    349.0,
+    384.0,
+    386.0,
+    428.0,
+    458.0,
+    613.0,
+    665.0,
+    775.0,
+    783.0,
+    823.0,
+    827.0,
+    832.0,
+    903.0,
+    968.0
+  ]
+}

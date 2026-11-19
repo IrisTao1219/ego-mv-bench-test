@@ -31,7 +31,8 @@
     "Instruct: Now mix the pasta and the tomato sauce together. Make sure they are thoroughly mixed.",
     "Instruct: Now take around 100 grams of mozzarella cheese and chop it up into very small pieces.",
     "Instruct: Now add the mozzarella cheese to the pasta mixture.",
-    "Instruct: Now stir the pasta and the mozzarella cheese together. Make sure that the cheese is mixed well."
+    "Instruct: Now stir the pasta and the mozzarella cheese together. Make sure that the cheese is mixed well.",
+    "Instruct: You can now turn off the heat. Your pasta is now done."
   ],
   "pred_timestamps": [
     1.0,
@@ -64,6 +65,7 @@
     2148.0,
     2202.0,
     2285.0,
-    2304.0
+    2304.0,
+    2342.0
   ]
 }

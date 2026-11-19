@@ -1,0 +1,17 @@
+{
+  "video_id": "GX010046",
+  "pred_texts": [
+    "Instruct: Get two slices of bread and toast them in the toaster until nice and crisp for about one minute.",
+    "Feedback: You put only one slice of bread in the toaster. The instruction requires two slices to be toasted.",
+    "Feedback: You put only one slice of bread in the toaster. The instruction requires two slices to be toasted.",
+    "Success: Step complete.",
+    "Instruct: You can take both pieces of bread out."
+  ],
+  "pred_timestamps": [
+    0.0,
+    170.0,
+    185.0,
+    210.0,
+    210.0
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "video_id": "GX010068",
+  "pred_texts": [
+    "Instruct: First grab a microwave-safe mug or bowl that is at least 6 ounces.",
+    "Success: Step complete.",
+    "Instruct: Now add 4 tablespoons of flour to the mug.",
+    "Instruct: Now add 2 teaspoons of sugar.",
+    "Instruct: Now add 2 tablespoons of cocoa powder.",
+    "Instruct: Now add a pinch of salt.",
+    "Instruct: Now stir and mix the solid ingredients together well.",
+    "Instruct: Now add 3 tablespoons of milk to the mixture.",
+    "Instruct: Now add 2 teaspoons of oil.",
+    "Instruct: Now mix the ingredients in the bowl together.",
+    "Instruct: Now add one egg to this mixture.",
+    "Instruct: Now stir the mixture together until well blended.",
+    "Instruct: Now you add one tablespoon of water.",
+    "Instruct: Now you can stir the mixture together vigorously until smooth, for about one minute.",
+    "Instruct: Now you can add one teaspoon of peanut butter to the mixture.",
+    "Instruct: Now fold the peanut into the mixture by gently stirring.",
+    "Instruct: Now microwave the mixture for about one minute.",
+    "Success: Step complete."
+  ],
+  "pred_timestamps": [
+    1.0,
+    11.0,
+    16.0,
+    77.0,
+    132.5,
+    171.2,
+    198.0,
+    233.0,
+    266.0,
+    297.4,
+    312.1,
+    329.2,
+    381.2,
+    399.0,
+    459.0,
+    489.0,
+    503.4,
+    588.4
+  ]
+}

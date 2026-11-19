@@ -1,9 +1,13 @@
 {
   "video_id": "GX010033",
   "pred_texts": [
-    "Instruct: First, get a baguette and slice four half-inch thick pieces from it."
+    "Instruct: First, get a baguette and slice four half-inch thick pieces from it.",
+    "Success: Step complete.",
+    "Instruct: Next, toast the baguette slices in the toaster. Toast until golden brown usually around 1 minute."
   ],
   "pred_timestamps": [
-    0.0
+    0.0,
+    85.0,
+    85.0
   ]
 }

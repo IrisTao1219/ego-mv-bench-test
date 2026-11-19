@@ -1,0 +1,43 @@
+{
+  "video_id": "GX010060",
+  "pred_texts": [
+    "Instruct: Get a large pan and add two tablespoons of olive oil.",
+    "Instruct: Get a medium sized shallot.",
+    "Success: Step complete.",
+    "Instruct: Now cut the shallots into medium-sized slices.",
+    "Instruct: Get 100 grams of fresh spinach and remove the stems. Rinse and chop it into small pieces.",
+    "Instruct: Get about 250 grams of firm tofu and chop it into small cubes.",
+    "Feedback: The instruction requires chopping firm tofu, but you are currently chopping green leafy vegetables. You have not yet started the required step of preparing the tofu.",
+    "Success: Step complete.",
+    "Instruct: Now switch on the stove with the pan. Set the heat to medium.",
+    "Success: Step complete.",
+    "Instruct: Now add sliced shallots to the pan and cook until they are soft and translucent for about three to five minutes. Grab a spatula and give it a little bit of a stir.",
+    "Instruct: Now add the tofu and stir, give it a nice stir.",
+    "Instruct: Now sauté the tofu for two minutes, stirring consistently with a spatula.",
+    "Instruct: Now add the chopped spinach to the pan. Spread it evenly in the pan.",
+    "Success: Step complete.",
+    "Instruct: Now season. Add one teaspoon of coriander powder, one teaspoon of cumin powder and some salt per taste. You can also add some turmeric powder to this per taste.",
+    "Instruct: Now stir everything together such that the spices are well mixed.",
+    "Instruct: Now cook until the spinach is fully wilted and tender and the tofu is heated through, about one to two minutes in total."
+  ],
+  "pred_timestamps": [
+    1.0,
+    43.0,
+    73.0,
+    81.0,
+    266.0,
+    393.0,
+    398.0,
+    518.0,
+    519.0,
+    534.0,
+    546.0,
+    892.0,
+    945.0,
+    1064.0,
+    1084.0,
+    1107.0,
+    1171.0,
+    1221.0
+  ]
+}

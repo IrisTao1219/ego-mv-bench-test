@@ -94,9 +94,9 @@ python scripts/wait_for_gpu.py \
   --gpu 1 \
   --min-free-mib 21680 \
   --interval 5 \
-  -- CUDA_VISIBLE_DEVICES=2 python run_inference.py \
+  -- python run_full_recipe.py \
   --data-root ../datasets/ego-mc-bench \
-  --model-path ../../Data/Hf_model/Qwen3.5-9B \
+  --model-path ../datasets/Hf_model/Qwen3-VL-30B-Instruct \
   --limit 0 \
   --interval 5 \
   --sample-fps 1 \
@@ -104,7 +104,23 @@ python scripts/wait_for_gpu.py \
   --max-frames 32 \
   --max-new-tokens 0 \
   --mistake-prompt detailed \
-  --feedback-dedup-rule explicit \
-  --thinking off \
-  --output-dir outputs/qwen3.5-9b-per-step-dedup-manual
+  --feedback-dedup-rule paper \
+  --assistant-feedback false \
+  --thinking default \
+  --output-dir outputs/qwen3-vl-30b-full-recipe \
+  --continue
 
+python scripts/wait_for_gpu.py \
+  --gpu 2 \
+  --min-free-mib 21680 \
+  --interval 5 \
+  -- CUDA_VISIBLE_DEVICES=3 python run_proassist.py \
+  --data-root ../datasets/ego-mc-bench \ß
+  --proassist-root ../ProAssist \
+  --model-path ../models/ProAssist-Model-L4096-I5 \
+  --base-model-path ../models/Llama-3.1-8B-Instruct \
+  --vision-model-path ../models/siglip-so400m-patch14-384 \
+  --protocol per_recipe_step \
+  --output-dir outputs/proassist-i5-smoke \
+  --limit 0
+  
