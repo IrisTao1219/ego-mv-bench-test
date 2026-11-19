@@ -274,7 +274,7 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
 
 **协议核对状态：当前为单路自主发言实验，不是目标论文表 3 的严格复现。** 不再逐帧发出完成/错误问题。按用户指定的本地规则，非空输出以完整单词 YES 开头（忽略大小写）映射为 Success，其余发言全部映射为 Feedback；这仅是序列化规则，不保证事件语义正确。系统提示及事件映射仍需真实模型验证。详见 [PROASSIST_PROTOCOL_AUDIT.md](PROASSIST_PROTOCOL_AUDIT.md)。
 
-独立入口 `run_proassist.py` 使用 ProAssist 连续流式历史机制：默认 `--sample-fps 2 --context-length 4096 --max-side 448 --max-new-tokens 0`，每 0.5 秒输入一张新帧，累积视觉与生成对话的 KV cache，不做均匀 32 帧截取，也不重放历史帧。接近 token 预算时调用官方 `manage_kv_cache` 的 `summarize_and_drop` 进度摘要机制；保留至少 128 tokens 的摘要触发余量。`--context-length 0` 可显式关闭摘要，但不再是默认设置。生成仍按静默规则或 EOS 停止，阈值默认 0.3 是本地默认值，不代表所有数据集最优值。
+独立入口 `run_proassist.py` 使用 ProAssist 连续流式历史机制：默认 `--sample-fps 1 --context-length 4096 --max-side 448 --max-new-tokens 0`，每 1 秒输入一张新帧，累积视觉与生成对话的 KV cache，不做均匀 32 帧截取，也不重放历史帧。接近 token 预算时调用官方 `manage_kv_cache` 的 `summarize_and_drop` 进度摘要机制；保留至少 128 tokens 的摘要触发余量。`--context-length 0` 可显式关闭摘要，但不再是默认设置。生成仍按静默规则或 EOS 停止，阈值默认 0.3 是本地默认值，不代表所有数据集最优值。
 
 数据选择、输出参数、图像缩放、生成预算参数与 JSON 保存复用 `run_inference.py`，完整食谱指令提取复用 `run_full_recipe.py`。图像仍保持宽高比、不放大、最长边 448，再交给官方视觉处理器；这项本地预处理及 ProAssist 上的提示应用方式尚未与表 3 对齐。单步协议切换时重置缓存；完整食谱协议只追加下一条指令，持续保留历史并按需摘要。支持 `--overwrite` 和 `--continue`。ProAssist 不提供 `--max-frames`，以免将均匀帧预算误用于流式历史。
 
@@ -320,7 +320,7 @@ CUDA_VISIBLE_DEVICES=1 python run_proassist.py \
 - `--protocol full_recipe`：从 0 秒连续播放，仅在模型输出有效 Success 时注入下一条指令，不读取人工时间戳；步骤切换保留缓存并按需摘要。每帧的查询提示包含当前指令；只在模型有效 Success 后切换到下一条指令。
 - 单路自主发言：开始时发送 system 规则及 user 当前步骤；此后仅输入新帧，不再追加逐帧文字问题。模型通过原生发言/静默阈值决定何时输出。单步骤切换重置缓存，完整食谱切换只追加新指令并保留缓存。摘要续接使用相同系统规则与当前步骤知识。
 - 非空正文以独立单词 `YES` 开头（忽略大小写）时，调用与 Qwen 共用的事件转换保存为 `Success: Step complete.`，原始 YES 及说明只保留日志；其余任何非空发言（包括 No、Not yet、普通提醒）保存为 `Feedback: <原始正文>`；空正文不生成事件。Yes 单独出现也接受，Yesterday 不算 YES；不要求解释或指定前缀、不做语义猜测或硬去重。原始正文及含特殊标记的解码结果仍写入日志。
-- `--mistake-prompt detailed|simple` 仅选择共享的错误定义详略；不再调用对应的轮询问答段落。系统提示包含“完成时以 YES 开头、发现错误时反馈、否则静默”的本地约定。历史发言通过原生 KV cache 和官方摘要保留，不再显式重复注入 assistant 反馈数组；移除 `--assistant-feedback`、`--feedback-dedup-rule` 参数。
+- `--mistake-prompt detailed|simple` 仅选择共享的错误定义详略；不再调用对应的轮询问答段落。系统提示明确要求每帧首先根据当前及历史视频判断整步完成，即使无错误也必须检查完成；完成可见时以 YES 开头给出证据。仅未完成时检查错误并反馈；二者均不满足才静默。禁止用指令已给出或部分进度推断完成，禁止输出 NO、鼓励、旁白或复述指令，纠错不得以 YES 开头。历史发言通过原生 KV cache 和官方摘要保留，不再显式重复注入 assistant 反馈数组；移除 `--assistant-feedback`、`--feedback-dedup-rule` 参数。
 - 日志的 `stage` 固定为 `stream`；后续纯画面帧的 `prompt` 为空、`input_messages=[]` 是正常增量输入。日志保留静默概率、阈值、生成前后及摘要管理后的缓存长度。`config.json` 记录单路模式、完整 system 及映射规则，明确 `paper_exact_reproduction=false`。
 
 `predictions.json` 与现有官方评测入口兼容。全量推理结束后，可在原有**评测环境**执行：
