@@ -24,9 +24,26 @@ CASES = [
 ]
 
 
-def messages_for(instruction, state):
-    return [
-        {"role": "system", "content": system_rules(SimpleNamespace(mistake_prompt="detailed"))},
+VARIANTS = ("full", "minimal", "few_shot")
+MINIMAL_RULES = (
+    "Determine whether the ENTIRE current recipe step is complete from the supplied state. "
+    "If complete, output exactly YES. If incomplete, output exactly WAIT. "
+    "Output only one of these two words. Do not give advice or introduce the next step."
+)
+
+
+def messages_for(instruction, state, variant="full"):
+    rules = (system_rules(SimpleNamespace(mistake_prompt="detailed"))
+             if variant == "full" else MINIMAL_RULES)
+    messages = [{"role": "system", "content": rules}]
+    if variant == "few_shot":
+        messages += [
+            {"role": "user", "content": "Current recipe step: Put three apples in a bowl.\nState: All three apples are in the bowl. The entire step is complete."},
+            {"role": "assistant", "content": "YES"},
+            {"role": "user", "content": "Current recipe step: Wash and peel a potato.\nState: The potato is washed but has not been peeled. The step is incomplete."},
+            {"role": "assistant", "content": "WAIT"},
+        ]
+    return messages + [
         {"role": "user", "content": "Current recipe step: " + instruction},
         {"role": "user", "content": "For this text-only diagnostic, treat the following state as established fact, replacing video observation: " + state + " Follow the system response rules for this state."},
     ]
@@ -66,7 +83,8 @@ def main():
     p.add_argument("--model-path", type=Path, default=Path("../models/ProAssist-Model-L4096-I5"))
     p.add_argument("--vision-model-path", type=Path, default=Path("../models/siglip-so400m-patch14-384"))
     p.add_argument("--proassist-root", type=Path, default=Path("../ProAssist"))
-    p.add_argument("--output-dir", type=Path, default=Path("outputs/proassist-yes-text-probe"))
+    p.add_argument("--output-dir", type=Path, default=Path("outputs/proassist-yes-text-controls"))
+    p.add_argument("--variants", nargs="+", choices=VARIANTS, default=list(VARIANTS))
     p.add_argument("--device-index", type=int, default=0)
     p.add_argument("--max-new-tokens", type=int, default=100)
     p.add_argument("--dry-run", action="store_true", help="Write exact prompts without loading models")
@@ -74,7 +92,8 @@ def main():
     if args.max_new_tokens < 1:
         p.error("max-new-tokens must be positive")
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    cases = [dict(case_id=k, expected_yes=y, messages=messages_for(i, s)) for k, i, s, y in CASES]
+    cases = [dict(variant=v, case_id=k, expected_yes=y, messages=messages_for(i, s, v))
+             for v in args.variants for k, i, s, y in CASES]
     for c in cases:
         c["input_str"] = serialize(c["messages"])
     (args.output_dir / "prompts.json").write_text(json.dumps(cases, indent=2))
@@ -104,20 +123,32 @@ def main():
         rows = []
         with (args.output_dir / (name + ".jsonl")).open("w") as log:
             for case in cases:
-                row = dict(case_id=case["case_id"], expected_yes=case["expected_yes"],
+                row = dict(variant=case["variant"], case_id=case["case_id"], expected_yes=case["expected_yes"],
                            **decode(model, tokenizer, case["input_str"], args.max_new_tokens))
                 row["leading_yes"] = bool(re.match(r"^YES\b", row["raw_response"], re.I))
-                # Negative controls only measure false YES; non-YES does not prove silence compliance.
+                row["exact_yes"] = row["raw_response"] == "YES"
+                row["exact_wait"] = row["raw_response"] == "WAIT"
+                # Full prompt requires silence for these incomplete cases; controls require WAIT.
+                row["response_contract_pass"] = (
+                    (row["leading_yes"] if row["expected_yes"] else not row["raw_response"])
+                    if row["variant"] == "full" else
+                    (row["exact_yes"] if row["expected_yes"] else row["exact_wait"])) and not row["hit_token_limit"]
                 rows.append(row)
                 log.write(json.dumps(row) + "\n")
                 log.flush()
-                print(name, row["case_id"], repr(row["raw_response"]), flush=True)
-        summaries[name] = dict(
-            completed_cases=sum(r["expected_yes"] for r in rows),
-            completed_leading_yes=sum(r["expected_yes"] and r["leading_yes"] for r in rows),
-            incomplete_cases=sum(not r["expected_yes"] for r in rows),
-            incomplete_false_yes=sum(not r["expected_yes"] and r["leading_yes"] for r in rows),
-            truncated=sum(r["hit_token_limit"] for r in rows))
+                print(name, row["variant"], row["case_id"], repr(row["raw_response"]), flush=True)
+        summaries[name] = {}
+        for variant in args.variants:
+            group = [r for r in rows if r["variant"] == variant]
+            summaries[name][variant] = dict(
+                completed_cases=sum(r["expected_yes"] for r in group),
+                completed_leading_yes=sum(r["expected_yes"] and r["leading_yes"] for r in group),
+                incomplete_cases=sum(not r["expected_yes"] for r in group),
+                incomplete_false_yes=sum(not r["expected_yes"] and r["leading_yes"] for r in group),
+                completed_exact_yes=sum(r["expected_yes"] and r["exact_yes"] for r in group),
+                incomplete_exact_wait=sum(not r["expected_yes"] and r["exact_wait"] for r in group),
+                response_contract_pass=sum(r["response_contract_pass"] for r in group),
+                truncated=sum(r["hit_token_limit"] for r in group))
         (args.output_dir / "summary.json").write_text(json.dumps(summaries, indent=2))
         if backend:
             backend.close()
