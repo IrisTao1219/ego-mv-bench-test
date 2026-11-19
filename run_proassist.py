@@ -178,6 +178,13 @@ class ProAssistBackend:
         cache_before = cache_tokens(self.past)
         ids, input_str = self.runner.processor.get_input_sequence(
             int(rgb is not None), messages, self.first)
+        # Explicit questions need an assistant generation prompt, as in Qwen's
+        # add_generation_prompt=True. Native frame continuation does not add it.
+        assistant_header = '<|start_header_id|>assistant<|end_header_id|>\n\n'
+        header_ids = torch.tensor([self.tokenizer.encode(
+            assistant_header, add_special_tokens=False)], dtype=ids.dtype, device=ids.device)
+        ids = torch.cat([ids, header_ids], dim=-1)
+        input_str += assistant_header
         self.first = False
         inputs = {'input_ids': ids}
         if rgb is not None:
@@ -363,7 +370,7 @@ def main():
                   task_prompt_policy='qwen_completion_then_mistake_if_no_each_sample',
                   system_prompt='', message_structure='user_completion_then_conditional_user_mistake',
                   stage_context_policy='single_stream',
-                  prompt_version='qwen_appendix_D_two_stage_explicit_dedup_v6', paper_prompt_verbatim=False,
+                  prompt_version='qwen_appendix_D_two_stage_assistant_header_v7', paper_prompt_verbatim=False,
                   feedback_history_policy='native_kv_and_qwen_recent_feedback_array',
                   speech_gate_policy='disabled_for_explicit_questions', effective_not_talk_threshold=1.0,
                   context_handling='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',

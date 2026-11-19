@@ -144,7 +144,8 @@ class ProAssistTests(unittest.TestCase):
             buffer.fill_(99)
             return 'managed-' + past, last
         runner = SimpleNamespace(processor=processor, manage_kv_cache=manage)
-        tokenizer = SimpleNamespace(decode=lambda ids: str(ids.tolist()), img_sep_token_id=6)
+        tokenizer = SimpleNamespace(decode=lambda ids: str(ids.tolist()), img_sep_token_id=6,
+                                    encode=lambda text, **kw: [8, 9])
         def build(path, rank):
             cfg = json.loads((Path(path) / 'config.json').read_text())
             self.assertIn('Meta-Llama-3', cfg['llm_pretrained'])
@@ -195,6 +196,8 @@ class ProAssistTests(unittest.TestCase):
                     self.assertIsNone(first_responses[0]['accepted'])
                     self.assertEqual(first_responses[0]['input_messages'], [
                         {'role': 'user', 'content': instruction_prompt('FIRST')}])
+                    self.assertTrue(first_responses[0]['input_str'].endswith(
+                        '<|start_header_id|>assistant<|end_header_id|>\n\n'))
                     self.assertIn('Fix', first['raw_response'])
                     self.assertEqual(second['input_messages'], [
                         {'role': 'user', 'content': instruction_prompt('FIRST')}])
