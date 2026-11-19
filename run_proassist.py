@@ -26,14 +26,27 @@ def system_rules(args):
                        explicit_dedup=False)
     rules = rules.split('Do not repeat previously detected mistakes.')[0]
     rules = rules.split('Assume the recipe step is still in progress.')[0].rstrip()
-    return ('Use the current recipe step from the latest user message.\n\n' + rules
-            + '\n\nWatch the incoming video stream and decide when to speak. '
-            'When the entire current recipe step is visibly complete, begin your response '
-            'with YES and briefly confirm completion. If a visible mistake directly interferes '
-            'with completing the current step, provide concise corrective feedback directly '
-            'to the person. Otherwise remain silent and generate no text. '
-            'Do not repeat feedback for the same unchanged mistake. '
-            'Do not invent or introduce the next recipe step.')
+    return (
+        'Use the current recipe step from the latest user message.\n\n'
+        'At each incoming frame, first determine whether the person has completed '
+        'the ENTIRE current recipe step based on the observed video and previous frames. '
+        'Completion detection is required even when no mistake has occurred. '
+        'Do not assume completion merely because the instruction was provided, '
+        'and do not treat partial progress as completion.\n\n'
+        'If the entire step is visibly complete, speak now: begin your response with YES '
+        'and briefly explain the visible evidence supporting completion. '
+        'Do not remain silent when completion is visible. Do not introduce the next step.\n\n'
+        'Only if the step is not complete, check whether the person is about to make '
+        'or has already made a visible mistake that directly interferes with successful '
+        'completion. Use the following mistake definitions:\n\n' + rules
+        + '\n\nIf such a mistake is visible, provide concise corrective feedback directly '
+        'to the person. Do not begin corrective feedback with YES; YES is reserved '
+        'for completion of the entire current step. Do not repeat feedback for the '
+        'same unchanged mistake.\n\n'
+        'If the step is neither complete nor visibly incorrect, remain silent and '
+        'generate no text. Do not output NO, progress narration, encouragement, '
+        'or a repetition of the instruction. Do not invent or introduce the next recipe step.'
+    )
 
 
 def cache_tokens(past):
@@ -299,7 +312,7 @@ def main():
     p.add_argument('--vision-model-path', type=Path, help='Vision model matching checkpoint vision_pretrained')
     p.add_argument('--protocol', choices=('per_recipe_step', 'full_recipe'), default='per_recipe_step')
     add_visual_arguments(p, include_frame_limit=False)
-    p.set_defaults(sample_fps=2)
+    p.set_defaults(sample_fps=1)
     p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed')
     p.add_argument('--not-talk-threshold', type=float, default=0.3)
     p.add_argument('--context-length', type=int, default=4096, help='Streaming token context budget; 0 disables upstream progress summarization')
@@ -332,7 +345,7 @@ def main():
                   task_prompt_policy='system_rules_once_instruction_on_transition_frames_only_afterwards',
                   system_prompt=system_rules(args), message_structure='system_then_user_instruction_then_frames',
                   stage_context_policy='single_stream',
-                  prompt_version='native_speech_yes_fixed_success_other_feedback_v2', paper_prompt_verbatim=False,
+                  prompt_version='native_speech_completion_first_yes_fixed_success_v3', paper_prompt_verbatim=False,
                   feedback_history_policy='native_generated_dialogue_kv_and_summary',
                   context_handling='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',
                   context_frame_limit=None, historical_frame_policy='incremental_kv_with_generated_dialogue',
