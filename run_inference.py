@@ -6,7 +6,7 @@ import math
 import os
 import re
 
-from paper_prompts import COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
+from prompts import DEDUP_RULE, COMPLETION_PROMPT, DETAILED_MISTAKE_PROMPT, SIMPLE_MISTAKE_PROMPT
 from pathlib import Path
 import time
 
@@ -86,11 +86,6 @@ def check_response(raw, field):
         return {field: positive, 'reason': explanation}
     return {field: positive, 'feedback': explanation if positive else ''}
 
-
-DEDUP_RULE = """Before answering, compare the current mistake with the previous feedback.
-If the same mistake was already reported and no new mistake occurred,
-answer NO, even if the mistake remains uncorrected.
-Answer YES only for a new, previously unreported mistake."""
 
 
 def prompt_for(stage, instruction, now, recent, mistake_prompt='detailed', explicit_dedup=True):

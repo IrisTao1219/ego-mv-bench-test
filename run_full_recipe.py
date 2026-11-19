@@ -11,7 +11,8 @@ from pathlib import Path
 import time
 
 from run_inference import load_samples, save_json, prompt_for, check_response, prediction_event, configure_generation, generation_limits, observed_frame_indices, inference_messages, feedback_context
-from run_inference import DEDUP_RULE, continuation_state
+from prompts import DEDUP_RULE
+from run_inference import continuation_state
 
 
 def instruction_texts(sample):
