@@ -47,3 +47,8 @@ CUDA_VISIBLE_DEVICES=3 python evaluate_official.py \
   --data-root ../datasets/ego-mc-bench \
   --predictions outputs/qwen3.5-27b-full-recipe/predictions.json \
   --report outputs/qwen3.5-27b-full-recipe/report.txt
+
+CUDA_VISIBLE_DEVICES=3 python evaluate_official.py \
+  --data-root ../datasets/ego-mc-bench \
+  --predictions outputs/proassist-i5/predictions.json \
+  --report outputs/proassist-i5/report.txt

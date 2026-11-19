@@ -1,0 +1,35 @@
+{
+  "video_id": "GX010048",
+  "pred_texts": [
+    "Instruct: First grab an apple and a knife.",
+    "Feedback: Not yet, but they're making progress.",
+    "Instruct: Now cut the apple into thin slices.",
+    "Success: Step complete.",
+    "Instruct: Now get a microwave-safe bowl and place the apple slices in the microwave-safe bowl. The slices should be placed on their side.",
+    "Success: Step complete.",
+    "Instruct: Now sprinkle some cinnamon and sugar over the apple slices.",
+    "Success: Step complete.",
+    "Instruct: Now you can microwave the apple slices in the microwave safe plate for around one minute until they're soft.",
+    "Success: Step complete.",
+    "Instruct: Now you can get a piece of bread and toast the bread until it is brown and crispy. Usually for around 2 minutes.",
+    "Success: Step complete.",
+    "Instruct: Now you can place the apple slices on top of the piece of bread.",
+    "Success: Step complete."
+  ],
+  "pred_timestamps": [
+    1.0,
+    1.0,
+    15.0,
+    15.0,
+    91.0,
+    91.0,
+    128.0,
+    128.0,
+    220.0,
+    220.0,
+    335.5,
+    335.5,
+    481.0,
+    481.0
+  ]
+}
