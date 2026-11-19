@@ -8,7 +8,26 @@
 
 Python 3.10+，建议 Linux NVIDIA CUDA 服务器。模型默认路径：`/datasets/Hf_model/Qwen3-VL-2B-Instruct`。
 
-### 显式选择反馈去重提示规则
+### 独立控制 assistant 历史与去重提示规则
+
+`run_inference.py` 和 `run_full_recipe.py` 共享两个独立参数，默认保持 assistant 历史开启、明确去重规则开启：
+
+| 参数 | 行为 |
+| --- | --- |
+| `--assistant-feedback true` | 将近期反馈作为 assistant 历史提供给完成和错误检测（默认） |
+| `--assistant-feedback false` | 仅发送一条 user 消息；detailed 错误提示词仍包含反馈数组，完成提示词不含反馈 |
+| `--feedback-dedup-rule explicit` | 追加 `prompts.py` 中的 `DEDUP_RULE`（默认） |
+| `--feedback-dedup-rule paper` | 不追加规则；保留原模板中已有的防重复要求 |
+
+例如，只在 user 中提供反馈、同时追加明确去重规则：
+
+```bash
+python run_inference.py --data-root ../datasets/ego-mc-bench \
+  --model-path /path/to/model --output-dir outputs/user-only-explicit \
+  --assistant-feedback false --feedback-dedup-rule explicit
+```
+
+四种组合均可用于对照。配置记录参数、消息结构及提示规则全文；真实输入继续写入 `*.model_inputs.jsonl`。无反馈历史时，即使开启 assistant 开关也只发一条 user。simple 模板不包含反馈数组；上述开关不改变最近 60 秒的历史缓存策略，也不硬过滤输出。切换实验条件时使用独立输出目录。
 
 两个推理入口均支持 `--feedback-dedup-rule explicit|paper`，默认 `explicit`。`explicit` 在错误检测提示词末尾追加明确去重决策规则；`paper` 使用原论文错误检测模板。两者共享当前步骤的反馈历史策略和输入打包方式，因此 `paper` 只恢复提示词模板，不是恢复历史版本的完整实验实现。配置自动记录所选参数、提示词版本、原文标识和追加规则（paper 时为 null）。完成检测不受该开关影响。
 

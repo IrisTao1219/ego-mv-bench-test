@@ -123,15 +123,48 @@ def feedback_context(history, now):
     return list(reversed(kept))
 
 
-def inference_messages(content, prompt, instruction=None, recent=()):
-    """Provide current-step feedback as assistant history before the visual query."""
+def inference_messages(content, prompt, instruction=None, recent=(), assistant_feedback=True):
+    """Optionally provide feedback as assistant history before the visual query."""
     messages = []
-    if recent:
+    if assistant_feedback and recent:
         messages.append({'role': 'user', 'content': 'Current instruction: ' + instruction})
         messages.append({'role': 'assistant', 'content': '\n'.join(
             'Feedback: ' + entry['feedback']
             for entry in recent)})
     return messages + [{'role': 'user', 'content': content + [{'type': 'text', 'text': prompt}]}]
+
+
+def add_feedback_arguments(parser):
+    """Shared independent controls for both inference protocols."""
+    parser.add_argument('--assistant-feedback', type=parse_bool, default=True,
+                        metavar='{true,false}', help='Include assistant feedback history in both '
+                        'stages (default: true); false uses one user message')
+    parser.add_argument('--feedback-dedup-rule', choices=('paper', 'explicit'), default='explicit',
+                        help='paper: original mistake template; explicit: append the local '
+                        'dedup decision rule, independently of assistant feedback')
+
+
+def parse_bool(value):
+    """Parse explicit CLI booleans without treating the string 'false' as true."""
+    if value.lower() not in ('true', 'false'):
+        raise argparse.ArgumentTypeError('Expected true or false')
+    return value.lower() == 'true'
+
+
+def feedback_prompt_config(args):
+    """Record selected policy even when no feedback history has yet been emitted."""
+    explicit = args.feedback_dedup_rule == 'explicit'
+    return dict(
+        assistant_feedback=args.assistant_feedback,
+        feedback_dedup_rule=args.feedback_dedup_rule,
+        message_structure=('user_assistant_user_with_feedback_history'
+                           if args.assistant_feedback else 'single_user'),
+        feedback_input_policy=('assistant_history_both_stages_and_detailed_mistake_prompt_array'
+                               if args.assistant_feedback else 'detailed_mistake_prompt_array_only'),
+        prompt_version='arxiv_2606.09547v2_appendix_D_' + (
+            'explicit_dedup_v1' if explicit else 'verbatim'),
+        paper_prompt_verbatim=not explicit,
+        mistake_dedup_rule=DEDUP_RULE if explicit else None)
 
 
 def prediction_event(parsed, field):
@@ -198,8 +231,7 @@ def main():
     p.add_argument('--interval', type=float, default=5, help='Query cadence in seconds; paper turn-based baseline: 5 seconds')
     p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed',
                    help='Appendix D: detailed for Qwen3-VL/Qwen3.5/Gemini; simple for older baselines')
-    p.add_argument('--feedback-dedup-rule', choices=('paper', 'explicit'), default='explicit',
-                   help='paper: original mistake template; explicit: append the local dedup decision rule')
+    add_feedback_arguments(p)
     p.add_argument('--sample-fps', type=float, default=1)
     p.add_argument('--max-frames', type=int, default=32, help='0 = complete observed step prefix; positive = uniform frame cap')
     p.add_argument('--max-side', type=int, default=448, help='Maximum image side; preserve aspect ratio without upscaling')
@@ -230,19 +262,14 @@ def main():
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(feedback_history_policy='current_step_last_60s_exact_text_dedup_latest',
                   feedback_history_window_seconds=60,
-                  message_structure='user_assistant_user_with_feedback_history',
-                  feedback_input_policy='assistant_history_both_stages_and_detailed_mistake_prompt_array',
                   protocol='per_recipe_step', reference='arXiv:2606.09547v2',
-                  prompt_version=('arxiv_2606.09547v2_appendix_D_explicit_dedup_v1'
-                                  if a.feedback_dedup_rule == 'explicit' else 'arxiv_2606.09547v2_appendix_D_verbatim'),
-                  paper_prompt_verbatim=a.feedback_dedup_rule == 'paper',
-                  mistake_dedup_rule=DEDUP_RULE if a.feedback_dedup_rule == 'explicit' else None,
                   input_image_policy='aspect_ratio_thumbnail', output_length_policy='eos_only' if not a.max_new_tokens else 'token_cap',
                   context_frame_limit=a.max_frames or None,
                   success_message_policy='fixed_confirmation_reason_logged_only',
                   response_format='YES_NO', enable_thinking=template_kwargs.get('enable_thinking'),
                   chat_template_kwargs=template_kwargs, paper_interval_seconds=5,
                   interval_matches_paper=(a.interval == 5), trained_on_ego_comist=False)
+    config.update(feedback_prompt_config(a))
     save_json(a.output_dir / 'config.json', config)
     if not a.dry_run:
         import transformers
@@ -315,11 +342,13 @@ def main():
                         for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
                             prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt,
                                                 explicit_dedup=a.feedback_dedup_rule == 'explicit')
-                            messages = inference_messages(content, prompt, step['instruction'], recent)
+                            messages = inference_messages(content, prompt, step['instruction'], recent,
+                                                          assistant_feedback=a.assistant_feedback)
                             input_log.write(json.dumps({
                                 'video_id': video_id, 'step_id': step_id,
                                 'timestamp': requested, 'stage': stage,
-                                'messages': inference_messages(logged_content, prompt, step['instruction'], recent),
+                                'messages': inference_messages(logged_content, prompt, step['instruction'], recent,
+                                                               assistant_feedback=a.assistant_feedback),
                             }, ensure_ascii=False) + '\n')
                             input_log.flush()
                             raw, error, parsed = '', None, None

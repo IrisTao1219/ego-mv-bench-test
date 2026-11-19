@@ -32,7 +32,7 @@ class FakeInputs(dict):
 
 class FullRecipeTests(unittest.TestCase):
     def run_recipe(self, replies, times=None, dry_run=False, interval=0.5, frame_count=21,
-                   dedup_rule=None, per_step=False, continue_run=False):
+                   dedup_rule=None, per_step=False, continue_run=False, assistant_feedback=None):
         import cv2
         import numpy as np
         with tempfile.TemporaryDirectory() as tmp:
@@ -73,6 +73,8 @@ class FullRecipeTests(unittest.TestCase):
                 args.append('--dry-run')
             if dedup_rule is not None:
                 args.extend(['--feedback-dedup-rule', dedup_rule])
+            if assistant_feedback is not None:
+                args.extend(['--assistant-feedback', str(assistant_feedback).lower()])
             with patch.object(sys, 'argv', args), patch.dict(sys.modules, transformers=transformers, torch=torch), \
                  patch.object(cv2, 'VideoCapture', return_value=cap), contextlib.redirect_stdout(io.StringIO()):
                 if per_step:
@@ -86,6 +88,11 @@ class FullRecipeTests(unittest.TestCase):
                 result = result[1:]
             logs = [json.loads(line) for line in (root/'out/v.jsonl').read_text().splitlines()]
             inputs = (root/'out/v.model_inputs.jsonl').read_text()
+            config = json.loads((root/'out/config.json').read_text())
+            enabled = True if assistant_feedback is None else assistant_feedback
+            self.assertEqual(config['assistant_feedback'], enabled)
+            self.assertEqual(config['message_structure'],
+                             'user_assistant_user_with_feedback_history' if enabled else 'single_user')
             if dedup_rule is not None:
                 config = json.loads((root/'out/config.json').read_text())
                 self.assertEqual(config['feedback_dedup_rule'], dedup_rule)
@@ -98,6 +105,29 @@ class FullRecipeTests(unittest.TestCase):
             if not dry_run:
                 validate_predictions([sample], result)
             return result[0], logs, inputs
+
+    def test_assistant_and_dedup_switches_are_independent(self):
+        from prompts import DEDUP_RULE
+        for per_step in (False, True):
+            for assistant in (False, True):
+                for policy in ('paper', 'explicit'):
+                    with self.subTest(per_step=per_step, assistant=assistant, policy=policy):
+                        _, _, inputs = self.run_recipe(
+                            ['NO', 'YES. Add salt.', 'NO', 'NO', 'YES. Done.', 'YES. Done.'],
+                            times=[0, 1, 2], interval=.5, frame_count=4,
+                            per_step=per_step, dedup_rule=policy, assistant_feedback=assistant)
+                        rows = [json.loads(line) for line in inputs.splitlines()]
+                        # The first feedback is available to both stages at t=1.
+                        history_rows = [r for r in rows if r['timestamp'] == 1]
+                        self.assertEqual({r['stage'] for r in history_rows}, {'completion', 'mistake'})
+                        for row in history_rows:
+                            messages = row['messages']
+                            self.assertEqual([m['role'] for m in messages],
+                                             ['user', 'assistant', 'user'] if assistant else ['user'])
+                            prompt = messages[-1]['content'][-1]['text']
+                            self.assertEqual(DEDUP_RULE in prompt,
+                                             row['stage'] == 'mistake' and policy == 'explicit')
+                            self.assertEqual('Add salt.' in prompt, row['stage'] == 'mistake')
 
     def test_continue_overwrites_partial_log_and_preserves_previous_predictions(self):
         result, logs, _ = self.run_recipe(

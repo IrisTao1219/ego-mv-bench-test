@@ -11,7 +11,7 @@ from pathlib import Path
 import time
 
 from run_inference import load_samples, save_json, prompt_for, check_response, prediction_event, configure_generation, generation_limits, observed_frame_indices, inference_messages, feedback_context
-from prompts import DEDUP_RULE
+from run_inference import add_feedback_arguments, feedback_prompt_config
 from run_inference import continuation_state
 
 
@@ -63,8 +63,7 @@ def main():
     p.add_argument('--interval', type=float, default=5, help='Query cadence in seconds; paper turn-based baseline: 5 seconds')
     p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed',
                    help='Appendix D: detailed for Qwen3-VL/Qwen3.5/Gemini; simple for older baselines')
-    p.add_argument('--feedback-dedup-rule', choices=('paper', 'explicit'), default='explicit',
-                   help='paper: original mistake template; explicit: append the local dedup decision rule')
+    add_feedback_arguments(p)
     p.add_argument('--sample-fps', type=float, default=1)
     p.add_argument('--max-frames', type=int, default=32, help='0 = complete observed step prefix; positive = uniform frame cap')
     p.add_argument('--max-side', type=int, default=448, help='Maximum image side; preserve aspect ratio without upscaling')
@@ -94,12 +93,6 @@ def main():
     a.output_dir.mkdir(parents=True, exist_ok=a.overwrite or a.continue_run)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(protocol='full_recipe', reference='arXiv:2606.09547v2',
-                  message_structure='user_assistant_user_with_feedback_history',
-                  feedback_input_policy='assistant_history_both_stages_and_detailed_mistake_prompt_array',
-                  prompt_version=('arxiv_2606.09547v2_appendix_D_explicit_dedup_v1'
-                                  if a.feedback_dedup_rule == 'explicit' else 'arxiv_2606.09547v2_appendix_D_verbatim'),
-                  paper_prompt_verbatim=a.feedback_dedup_rule == 'paper',
-                  mistake_dedup_rule=DEDUP_RULE if a.feedback_dedup_rule == 'explicit' else None,
                   input_image_policy='aspect_ratio_thumbnail', output_length_policy='eos_only' if not a.max_new_tokens else 'token_cap',
                   context_frame_limit=a.max_frames or None,
                   success_message_policy='fixed_confirmation_reason_logged_only',
@@ -112,6 +105,7 @@ def main():
                   feedback_history_policy='current_step_last_60s_exact_text_dedup_latest',
                   feedback_history_window_seconds=60,
                   dry_run_policy='no_model_no_transitions_no_predictions')
+    config.update(feedback_prompt_config(a))
     save_json(a.output_dir / 'config.json', config)
     if not a.dry_run:
         import transformers
@@ -180,11 +174,13 @@ def main():
                     for stage, field in [('completion', 'completed'), ('mistake', 'mistake')]:
                         prompt = prompt_for(stage, step['instruction'], requested, recent, a.mistake_prompt,
                                             explicit_dedup=a.feedback_dedup_rule == 'explicit')
-                        messages = inference_messages(content, prompt, step['instruction'], recent)
+                        messages = inference_messages(content, prompt, step['instruction'], recent,
+                                                      assistant_feedback=a.assistant_feedback)
                         input_log.write(json.dumps({
                             'video_id': video_id, 'step_id': step_id,
                             'timestamp': requested, 'stage': stage,
-                            'messages': inference_messages(logged_content, prompt, step['instruction'], recent),
+                            'messages': inference_messages(logged_content, prompt, step['instruction'], recent,
+                                                           assistant_feedback=a.assistant_feedback),
                         }, ensure_ascii=False) + '\n')
                         input_log.flush()
                         raw, error, parsed = '', None, None
