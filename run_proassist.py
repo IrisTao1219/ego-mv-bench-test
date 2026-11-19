@@ -22,6 +22,23 @@ from run_full_recipe import instruction_texts
 
 def system_rules(args):
     """Reuse mistake definitions without the polling YES/NO question contract."""
+    if args.mistake_prompt == 'simple':
+        # Appendix D completion + simple mistake prompts, adapted to one native
+        # stream: YES is reserved for completion, corrective speech has no YES.
+        return (
+            'You are an expert cooking assistant observing a person cook. '
+            'Use the current recipe step in the latest user message.\n\n'
+            'First check whether the person has completed the entire recipe step '
+            'from the video so far. If complete, begin with YES and briefly explain '
+            'the evidence for completion.\n\n'
+            'Otherwise, check whether the person is about to make or has made a '
+            'mistake that directly interferes with successful instruction completion. '
+            'Do not treat a partially completed step as a mistake. If a mistake is '
+            'visible, give concise corrective feedback directly to the person, '
+            'without starting with YES. Do not repeat feedback for the same mistake.\n\n'
+            'If neither complete nor visibly incorrect, remain silent. '
+            'Do not output NO, encouragement, or instructions for the next step.'
+        )
     rules = prompt_for('mistake', '[recipe_step]', 0, [], args.mistake_prompt,
                        explicit_dedup=False)
     rules = rules.split('Do not repeat previously detected mistakes.')[0]
@@ -313,7 +330,7 @@ def main():
     p.add_argument('--protocol', choices=('per_recipe_step', 'full_recipe'), default='per_recipe_step')
     add_visual_arguments(p, include_frame_limit=False)
     p.set_defaults(sample_fps=1)
-    p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed')
+    p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='simple')
     p.add_argument('--not-talk-threshold', type=float, default=0.3)
     p.add_argument('--context-length', type=int, default=4096, help='Streaming token context budget; 0 disables upstream progress summarization')
     p.add_argument('--device-index', type=int, default=0)
@@ -345,7 +362,8 @@ def main():
                   task_prompt_policy='system_rules_once_instruction_on_transition_frames_only_afterwards',
                   system_prompt=system_rules(args), message_structure='system_then_user_instruction_then_frames',
                   stage_context_policy='single_stream',
-                  prompt_version='native_speech_completion_first_yes_fixed_success_v3', paper_prompt_verbatim=False,
+                  prompt_version=('native_speech_appendix_d_simple_v4' if args.mistake_prompt == 'simple'
+                                  else 'native_speech_completion_first_yes_fixed_success_v3'), paper_prompt_verbatim=False,
                   feedback_history_policy='native_generated_dialogue_kv_and_summary',
                   context_handling='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',
                   context_frame_limit=None, historical_frame_policy='incremental_kv_with_generated_dialogue',
