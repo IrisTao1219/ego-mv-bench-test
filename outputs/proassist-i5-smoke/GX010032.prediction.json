@@ -1,0 +1,33 @@
+{
+  "video_id": "GX010032",
+  "pred_texts": [
+    "Instruct: First, get a baguette and slice it into four half-inch thick pieces.",
+    "Feedback: Great job slicing the baguette! Now, let's move on to the next step.",
+    "Instruct: Now place the slices in a toaster or a toaster oven.",
+    "Instruct: Toast them until they are golden and crisp, usually about one minute, depending on your toaster.",
+    "Instruct: Carefully remove the toast from the toaster.",
+    "Feedback: Not yet, let's focus on the bread. Please make sure it's fully inserted into the toaster.",
+    "Feedback: Remember to align the bread properly.",
+    "Instruct: Now brush each slice lightly with some olive oil.",
+    "Instruct: Now, dice half a tomato for the topping.",
+    "Instruct: Now, you need to add fresh basil to the tomato mixture, according to your taste. First wash the basil before adding.",
+    "Instruct: Next, you need to chop the basil and then add it to your tomato mixture.",
+    "Instruct: Add a pinch of salt and drizzle some olive oil.",
+    "Instruct: Now, mix the ingredients together and top it on your toasted bread."
+  ],
+  "pred_timestamps": [
+    14.791,
+    47.791,
+    64.191,
+    73.911,
+    143.541,
+    144.541,
+    146.541,
+    186.451,
+    235.761,
+    276.161,
+    317.561,
+    337.761,
+    357.861
+  ]
+}

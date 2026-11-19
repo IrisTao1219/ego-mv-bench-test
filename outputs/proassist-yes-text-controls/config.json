@@ -1,0 +1,16 @@
+{
+  "backend": "both",
+  "base_model_path": "../models/Llama-3.1-8B-Instruct",
+  "model_path": "../models/ProAssist-Model-L4096-I5",
+  "vision_model_path": "../models/siglip-so400m-patch14-384",
+  "proassist_root": "../ProAssist",
+  "output_dir": "outputs/proassist-yes-text-controls",
+  "variants": [
+    "full",
+    "minimal",
+    "few_shot"
+  ],
+  "device_index": 0,
+  "max_new_tokens": 100,
+  "dry_run": false
+}

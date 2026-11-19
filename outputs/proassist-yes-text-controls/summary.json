@@ -1,0 +1,66 @@
+{
+  "base": {
+    "full": {
+      "completed_cases": 3,
+      "completed_leading_yes": 3,
+      "incomplete_cases": 2,
+      "incomplete_false_yes": 0,
+      "completed_exact_yes": 0,
+      "incomplete_exact_wait": 0,
+      "response_contract_pass": 3,
+      "truncated": 0
+    },
+    "minimal": {
+      "completed_cases": 3,
+      "completed_leading_yes": 3,
+      "incomplete_cases": 2,
+      "incomplete_false_yes": 0,
+      "completed_exact_yes": 3,
+      "incomplete_exact_wait": 2,
+      "response_contract_pass": 5,
+      "truncated": 0
+    },
+    "few_shot": {
+      "completed_cases": 3,
+      "completed_leading_yes": 3,
+      "incomplete_cases": 2,
+      "incomplete_false_yes": 0,
+      "completed_exact_yes": 3,
+      "incomplete_exact_wait": 2,
+      "response_contract_pass": 5,
+      "truncated": 0
+    }
+  },
+  "proassist": {
+    "full": {
+      "completed_cases": 3,
+      "completed_leading_yes": 0,
+      "incomplete_cases": 2,
+      "incomplete_false_yes": 0,
+      "completed_exact_yes": 0,
+      "incomplete_exact_wait": 0,
+      "response_contract_pass": 0,
+      "truncated": 0
+    },
+    "minimal": {
+      "completed_cases": 3,
+      "completed_leading_yes": 3,
+      "incomplete_cases": 2,
+      "incomplete_false_yes": 0,
+      "completed_exact_yes": 2,
+      "incomplete_exact_wait": 2,
+      "response_contract_pass": 4,
+      "truncated": 0
+    },
+    "few_shot": {
+      "completed_cases": 3,
+      "completed_leading_yes": 3,
+      "incomplete_cases": 2,
+      "incomplete_false_yes": 0,
+      "completed_exact_yes": 3,
+      "incomplete_exact_wait": 2,
+      "response_contract_pass": 5,
+      "truncated": 0
+    }
+  }
+}

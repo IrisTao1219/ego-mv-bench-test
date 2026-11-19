@@ -1,0 +1,16 @@
+{
+  "base": {
+    "completed_cases": 3,
+    "completed_leading_yes": 3,
+    "incomplete_cases": 2,
+    "incomplete_false_yes": 0,
+    "truncated": 0
+  },
+  "proassist": {
+    "completed_cases": 3,
+    "completed_leading_yes": 0,
+    "incomplete_cases": 2,
+    "incomplete_false_yes": 0,
+    "truncated": 0
+  }
+}
