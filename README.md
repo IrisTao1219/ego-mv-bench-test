@@ -272,7 +272,7 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
 
 ## ProAssist 自主发言实验
 
-**协议核对状态：当前入口尚未与目标论文表 3 的全部设置对齐，不应使用其输出报告严格复现结果，也暂不建议继续全量跑分。** 旧版自拟前缀提示的真实短跑曾出现提前续写且无有效事件；当前已改用与 Qwen 共用的任务规则和 YES/NO 解析，保留双缓存隔离，并恢复 system 规则约束、保留 ProAssist 专用 YES/NO 大小写容错，新版尚待真实推理验证。逐项差异及缺失原始设置见 [PROASSIST_PROTOCOL_AUDIT.md](PROASSIST_PROTOCOL_AUDIT.md)。以下命令目前仅供诊断；ProAssist 自身演示参数不等于目标论文评测参数。
+**协议核对状态：当前为单路自主发言实验，不是目标论文表 3 的严格复现。** 不再逐帧发出完成/错误问题。按用户指定的本地规则，非空输出以完整单词 YES 开头（忽略大小写）映射为 Success，其余发言全部映射为 Feedback；这仅是序列化规则，不保证事件语义正确。系统提示及事件映射仍需真实模型验证。详见 [PROASSIST_PROTOCOL_AUDIT.md](PROASSIST_PROTOCOL_AUDIT.md)。
 
 独立入口 `run_proassist.py` 使用 ProAssist 连续流式历史机制：默认 `--sample-fps 2 --context-length 4096 --max-side 448 --max-new-tokens 0`，每 0.5 秒输入一张新帧，累积视觉与生成对话的 KV cache，不做均匀 32 帧截取，也不重放历史帧。接近 token 预算时调用官方 `manage_kv_cache` 的 `summarize_and_drop` 进度摘要机制；保留至少 128 tokens 的摘要触发余量。`--context-length 0` 可显式关闭摘要，但不再是默认设置。生成仍按静默规则或 EOS 停止，阈值默认 0.3 是本地默认值，不代表所有数据集最优值。
 
@@ -318,11 +318,10 @@ CUDA_VISIBLE_DEVICES=1 python run_proassist.py \
 
 - 默认 `--protocol per_recipe_step`：每步从人工 Instruction 时间重置视频上下文；完成后转下一步的人工 Instruction 起点。若始终未完成，在下一条人工 Instruction 边界重置，保留该步未完成结果。模型不读取参考 Feedback、Success 或用户对话。
 - `--protocol full_recipe`：从 0 秒连续播放，仅在模型输出有效 Success 时注入下一条指令，不读取人工时间戳；步骤切换保留缓存并按需摘要。每帧的查询提示包含当前指令；只在模型有效 Success 后切换到下一条指令。
-- 任务流程保留完成→错误两阶段：先检查完成，仅明确 NO（包括 No/no）后生成错误检查回答。通过 `run_inference.py` 的 `prompt_for` 构造各阶段独立的 system 规则，在各自流开始时注入一次；user 仅携带当前步骤、近期反馈与本阶段问题，历史反馈角色安排复用 `inference_messages`。官方摘要续接时携带该阶段系统规则。共享规则正文不做静默改写，消息分工属于本地适配。错误检查恢复共享模板的 YES/NO 要求，YES 后提供反馈。
-- 仅 ProAssist 的响应适配层将开头完整单词 YES/NO 做大小写归一化，再调用共享 `check_response`/`prediction_event`。支持 Yes/yes/No/no，不把 Not yet、Nobody 等词猜成标签；YES 仍须有解释，原始响应保留在日志。Qwen 解析器保持原样。完成 YES 输出 `Success: Step complete.`，错误 YES 保留反馈正文。
-- 完成/错误仍分别持有独立 KV cache 和官方摘要状态，各自编码每张新帧；完成检查静默、坏格式或 YES 时，错误流只预填充画面并以静默标记衔接。只有近期已接受反馈通过共享的最近 60 秒去重历史显式提供给两个阶段。双流会增加视觉编码、缓存及摘要开销。
-- `--mistake-prompt detailed|simple`、`--assistant-feedback true|false`、`--feedback-dedup-rule paper|explicit` 复用公共实现，默认为 detailed、true、explicit。日志保留静默概率、阈值及各阶段缓存长度，跳过错误生成时记录 `mistake_context_only=true`。以上 ProAssist 任务适配并非已核验的表 3 原始协议。
-- `config.json` 明确标记 `paper_exact_reproduction=false`。没有声称共享的附录 D 提示词在 ProAssist 上的应用、参数、采样或步骤调度是论文表 3 的原始实现，也没有声称 I1 就是表 3 使用的版本。
+- 单路自主发言：开始时发送 system 规则及 user 当前步骤；此后仅输入新帧，不再追加逐帧文字问题。模型通过原生发言/静默阈值决定何时输出。单步骤切换重置缓存，完整食谱切换只追加新指令并保留缓存。摘要续接使用相同系统规则与当前步骤知识。
+- 非空正文以独立单词 `YES` 开头（忽略大小写）时，调用与 Qwen 共用的事件转换保存为 `Success: Step complete.`，原始 YES 及说明只保留日志；其余任何非空发言（包括 No、Not yet、普通提醒）保存为 `Feedback: <原始正文>`；空正文不生成事件。Yes 单独出现也接受，Yesterday 不算 YES；不要求解释或指定前缀、不做语义猜测或硬去重。原始正文及含特殊标记的解码结果仍写入日志。
+- `--mistake-prompt detailed|simple` 仅选择共享的错误定义详略；不再调用对应的轮询问答段落。系统提示包含“完成时以 YES 开头、发现错误时反馈、否则静默”的本地约定。历史发言通过原生 KV cache 和官方摘要保留，不再显式重复注入 assistant 反馈数组；移除 `--assistant-feedback`、`--feedback-dedup-rule` 参数。
+- 日志的 `stage` 固定为 `stream`；后续纯画面帧的 `prompt` 为空、`input_messages=[]` 是正常增量输入。日志保留静默概率、阈值、生成前后及摘要管理后的缓存长度。`config.json` 记录单路模式、完整 system 及映射规则，明确 `paper_exact_reproduction=false`。
 
 `predictions.json` 与现有官方评测入口兼容。全量推理结束后，可在原有**评测环境**执行：
 
