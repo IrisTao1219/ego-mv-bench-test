@@ -77,16 +77,17 @@ CUDA_VISIBLE_DEVICES=2 python run_inference.py \
 CUDA_VISIBLE_DEVICES=2 python run_full_recipe.py \
   --data-root ../datasets/ego-mc-bench \
   --model-path ../../Data/Hf_model/Qwen3.5-9B \
-  --limit 0 \ß
+  --limit 0 \
   --interval 5 \
   --sample-fps 1 \
   --max-side 448 \
   --max-frames 32 \
   --max-new-tokens 0 \
   --mistake-prompt detailed \
-  --feedback-dedup-rule explicit \
+  --feedback-dedup-rule paper \
+  --assistant-feedback false \
   --thinking off \
-  --output-dir outputs/qwen3.5-9b-full-recipe-dedup &&
+  --output-dir outputs/qwen3.5-9b-full-recipe &&
 
 
 python scripts/wait_for_gpu.py \

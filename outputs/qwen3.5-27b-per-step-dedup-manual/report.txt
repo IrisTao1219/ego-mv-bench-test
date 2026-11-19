@@ -1,0 +1,237 @@
+Source: QualcommInteractiveCookingEvaluator, unmodified vendored evaluator
+Submitted videos: 20 / 39
+num_of_instructions: 562
+num_of_feedbacks: 397
+num_of_feedback_replies: 0
+num_of_instruction_clarifications: 26
+num_of_user_responses: 52
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 33.3
+mistake_tp:0, mistake_fp:0, mistake_tn:2, mistake_fn:7
+Mistake Accuracy: 0.22 -- Mistake Precision: 0.00 -- Mistake Recall: 0.00 -- Mistake F1_Score: 0.00 -- 
+Mistake Mean BERT Score: 0.000, Mistake Mean Rouge-L Score: 0.000
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 38.5
+mistake_tp:0, mistake_fp:0, mistake_tn:8, mistake_fn:12
+Mistake Accuracy: 0.40 -- Mistake Precision: 0.00 -- Mistake Recall: 0.00 -- Mistake F1_Score: 0.00 -- 
+Mistake Mean BERT Score: 0.000, Mistake Mean Rouge-L Score: 0.000
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 33.3
+mistake_tp:0, mistake_fp:1, mistake_tn:11, mistake_fn:19
+Mistake Accuracy: 0.35 -- Mistake Precision: 0.00 -- Mistake Recall: 0.00 -- Mistake F1_Score: 0.00 -- 
+Mistake Mean BERT Score: 0.000, Mistake Mean Rouge-L Score: 0.000
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 34.5
+mistake_tp:0, mistake_fp:1, mistake_tn:15, mistake_fn:21
+Mistake Accuracy: 0.41 -- Mistake Precision: 0.00 -- Mistake Recall: 0.00 -- Mistake F1_Score: 0.00 -- 
+Mistake Mean BERT Score: 0.000, Mistake Mean Rouge-L Score: 0.000
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 27.8
+mistake_tp:0, mistake_fp:1, mistake_tn:15, mistake_fn:24
+Mistake Accuracy: 0.38 -- Mistake Precision: 0.00 -- Mistake Recall: 0.00 -- Mistake F1_Score: 0.00 -- 
+Mistake Mean BERT Score: 0.000, Mistake Mean Rouge-L Score: 0.000
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 23.8
+mistake_tp:0, mistake_fp:1, mistake_tn:15, mistake_fn:29
+Mistake Accuracy: 0.33 -- Mistake Precision: 0.00 -- Mistake Recall: 0.00 -- Mistake F1_Score: 0.00 -- 
+Mistake Mean BERT Score: 0.000, Mistake Mean Rouge-L Score: 0.000
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 25.0
+mistake_tp:0, mistake_fp:1, mistake_tn:20, mistake_fn:36
+Mistake Accuracy: 0.35 -- Mistake Precision: 0.00 -- Mistake Recall: 0.00 -- Mistake F1_Score: 0.00 -- 
+Mistake Mean BERT Score: 0.000, Mistake Mean Rouge-L Score: 0.000
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 27.0
+mistake_tp:1, mistake_fp:1, mistake_tn:25, mistake_fn:46
+Mistake Accuracy: 0.36 -- Mistake Precision: 0.50 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.04 -- 
+Mistake Mean BERT Score: 0.373, Mistake Mean Rouge-L Score: 0.242
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 25.8
+mistake_tp:1, mistake_fp:1, mistake_tn:25, mistake_fn:51
+Mistake Accuracy: 0.33 -- Mistake Precision: 0.50 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.04 -- 
+Mistake Mean BERT Score: 0.373, Mistake Mean Rouge-L Score: 0.242
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 25.0
+mistake_tp:1, mistake_fp:1, mistake_tn:26, mistake_fn:57
+Mistake Accuracy: 0.32 -- Mistake Precision: 0.50 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.03 -- 
+Mistake Mean BERT Score: 0.373, Mistake Mean Rouge-L Score: 0.242
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 23.7
+mistake_tp:1, mistake_fp:1, mistake_tn:29, mistake_fn:65
+Mistake Accuracy: 0.31 -- Mistake Precision: 0.50 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.03 -- 
+Mistake Mean BERT Score: 0.373, Mistake Mean Rouge-L Score: 0.242
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 23.0
+mistake_tp:2, mistake_fp:1, mistake_tn:31, mistake_fn:73
+Mistake Accuracy: 0.31 -- Mistake Precision: 0.67 -- Mistake Recall: 0.03 -- Mistake F1_Score: 0.05 -- 
+Mistake Mean BERT Score: 0.410, Mistake Mean Rouge-L Score: 0.337
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 24.2
+mistake_tp:2, mistake_fp:1, mistake_tn:33, mistake_fn:81
+Mistake Accuracy: 0.30 -- Mistake Precision: 0.67 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.05 -- 
+Mistake Mean BERT Score: 0.410, Mistake Mean Rouge-L Score: 0.337
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 23.4
+mistake_tp:2, mistake_fp:1, mistake_tn:34, mistake_fn:86
+Mistake Accuracy: 0.29 -- Mistake Precision: 0.67 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.04 -- 
+Mistake Mean BERT Score: 0.410, Mistake Mean Rouge-L Score: 0.337
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 24.0
+mistake_tp:2, mistake_fp:1, mistake_tn:36, mistake_fn:94
+Mistake Accuracy: 0.29 -- Mistake Precision: 0.67 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.04 -- 
+Mistake Mean BERT Score: 0.410, Mistake Mean Rouge-L Score: 0.337
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 24.5
+mistake_tp:2, mistake_fp:1, mistake_tn:38, mistake_fn:100
+Mistake Accuracy: 0.28 -- Mistake Precision: 0.67 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.04 -- 
+Mistake Mean BERT Score: 0.410, Mistake Mean Rouge-L Score: 0.337
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 24.1
+mistake_tp:2, mistake_fp:1, mistake_tn:43, mistake_fn:109
+Mistake Accuracy: 0.29 -- Mistake Precision: 0.67 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.04 -- 
+Mistake Mean BERT Score: 0.410, Mistake Mean Rouge-L Score: 0.337
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 24.8
+mistake_tp:2, mistake_fp:1, mistake_tn:47, mistake_fn:120
+Mistake Accuracy: 0.29 -- Mistake Precision: 0.67 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.03 -- 
+Mistake Mean BERT Score: 0.410, Mistake Mean Rouge-L Score: 0.337
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 23.4
+mistake_tp:2, mistake_fp:1, mistake_tn:48, mistake_fn:131
+Mistake Accuracy: 0.27 -- Mistake Precision: 0.67 -- Mistake Recall: 0.02 -- Mistake F1_Score: 0.03 -- 
+Mistake Mean BERT Score: 0.410, Mistake Mean Rouge-L Score: 0.337
+>>>
+
+================================================================================
+
+<<<
+DETECTION_WINDOW_LENGTH: 15.0
+IC-Acc: 24.8
+mistake_tp:2, mistake_fp:1, mistake_tn:53, mistake_fn:149
+Mistake Accuracy: 0.27 -- Mistake Precision: 0.67 -- Mistake Recall: 0.01 -- Mistake F1_Score: 0.03 -- 
+Mistake Mean BERT Score: 0.410, Mistake Mean Rouge-L Score: 0.337
+>>>
+
+
+Supplementary metrics (custom_metrics.py, version 1; rates in [0, 1]):
+{
+  "metric_version": 1,
+  "scope": "submitted_videos_only",
+  "submitted_videos": 20,
+  "reference_videos": 39,
+  "reference_steps": 254,
+  "mistake_free_steps": 141,
+  "completion_tp": 58,
+  "completion_fp": 41,
+  "completion_fn": 196,
+  "completion_precision_at_15s": 0.5858585858585859,
+  "completion_recall_at_15s": 0.2283464566929134,
+  "completion_f1_at_15s": 0.3286118980169972,
+  "completion_hit_rate_at_5s": 0.16141732283464566,
+  "completion_hit_rate_at_15s": 0.2283464566929134,
+  "completion_hit_rate_at_30s": 0.31496062992125984,
+  "timing_matched_steps": 99,
+  "completion_mean_signed_error_seconds": -13.979030979797978,
+  "completion_mean_absolute_error_seconds": 23.02834411111111,
+  "completion_median_absolute_error_seconds": 10.9,
+  "relaxed_ic_hits": 35,
+  "relaxed_ic_accuracy_at_15s": 0.24822695035460993,
+  "mistake_free_steps_with_feedback": 0,
+  "mistake_free_step_false_alarm_rate": 0.0,
+  "feedback_events": 4,
+  "exact_repeat_feedback_events": 0,
+  "exact_repeat_feedback_rate": 0.0
+}
