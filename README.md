@@ -90,7 +90,7 @@ python -m pip install -r requirements.txt
 
 ## 统一输入与输出预算
 
-两个 Qwen 入口默认 `--interval 5 --sample-fps 1 --max-side 448 --max-frames 32 --max-new-tokens 0`。`--max-frames 32` 限制每次输入帧数；`--max-new-tokens 0` 表示不设置生成 token 人为上限；生成保留模型 EOS 停止规则，同时清除模型配置继承的长度、最短长度和时间预算。Transformers 的必填 `max_length` 使用系统最大整数哨兵，并非预分配输出缓冲区。模型原生上下文容量与显存仍有限；超出时不静默截断。ProAssist 同样取消固定输出上限，默认不压缩步骤上下文，但其视觉处理器和内部 token 表示仍由该模型决定。
+两个 Qwen 入口默认 `--interval 5 --sample-fps 1 --max-side 448 --max-frames 32 --max-new-tokens 0`。`--max-frames 32` 限制每次输入帧数；`--max-new-tokens 0` 表示不设置生成 token 人为上限；生成保留模型 EOS 停止规则，同时清除模型配置继承的长度、最短长度和时间预算。Transformers 的必填 `max_length` 使用系统最大整数哨兵，并非预分配输出缓冲区。模型原生上下文容量与显存仍有限；超出时不静默截断。ProAssist 同样取消固定输出上限，默认采用连续帧输入与 4096-token 进度摘要；其视觉处理器和内部 token 表示仍由该模型决定。
 
 原问答提示词、YES/NO 解析、thinking 开关、事件格式保留；纠错历史改为当前步骤内完整保留。查询间隔恢复为论文基础模型的 5 秒协议；1 FPS 和最多 32 帧是恢复后的本地采样预算，不代表已确认论文轮询基线也使用同样设置。旧 Qwen 预算可显式使用 `--interval 5 --sample-fps 1 --max-frames 32 --max-new-tokens 256`，Qwen 图像处理已恢复为保持宽高比、最长边不超过 448。
 
@@ -274,7 +274,9 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
 
 **协议核对状态：当前入口尚未与目标论文表 3 的全部设置对齐，不应使用其输出报告严格复现结果，也暂不建议继续全量跑分。** 系统提示、user 角色注入和前缀解析是本地自拟设置，真实短跑已发现模型提前续写后续步骤且无法生成有效事件。逐项差异及缺失原始设置见 [PROASSIST_PROTOCOL_AUDIT.md](PROASSIST_PROTOCOL_AUDIT.md)。以下命令目前仅供诊断；ProAssist 自身演示参数不等于目标论文评测参数。
 
-独立入口 `run_proassist.py` 使用 [ProAssist 官方代码](https://github.com/pro-assist/ProAssist) 的输入格式和静默判断。默认每秒采样并输入一帧（1 FPS），RGB 先缩放到 224×224，再交给模型自己的视觉处理器。默认 `--context-length 0` 保留完整步骤 KV cache，不再摘要或丢弃历史；步骤切换时重置缓存。默认 `--max-new-tokens 0` 使用动态 token 缓冲区，按上游静默规则或 EOS 自然停止；显式设置正数则使用上游有界生成接口。静默阈值仍为 0.3，模型的视觉 token 数及 decision head 仍由权重配置决定。这些差异会记录在配置中，不能视为与 Qwen 完全相同的内部上下文。
+独立入口 `run_proassist.py` 使用 ProAssist 连续流式历史机制：默认 `--sample-fps 2 --context-length 4096 --max-side 448 --max-new-tokens 0`，每 0.5 秒输入一张新帧，累积视觉与生成对话的 KV cache，不做均匀 32 帧截取，也不重放历史帧。接近 token 预算时调用官方 `manage_kv_cache` 的 `summarize_and_drop` 进度摘要机制；保留至少 128 tokens 的摘要触发余量。`--context-length 0` 可显式关闭摘要，但不再是默认设置。生成仍按静默规则或 EOS 停止，阈值默认 0.3 是本地默认值，不代表所有数据集最优值。
+
+数据选择、输出参数、图像缩放、生成预算参数与 JSON 保存复用 `run_inference.py`，完整食谱指令提取复用 `run_full_recipe.py`。图像仍保持宽高比、不放大、最长边 448，再交给官方视觉处理器；这项本地预处理及提示/事件映射尚未与目标论文对齐。单步协议切换时重置缓存；完整食谱协议只追加下一条指令，持续保留历史并按需摘要。支持 `--overwrite` 和 `--continue`。ProAssist 不提供 `--max-frames`，以免将均匀帧预算误用于流式历史。
 
 请使用 **独立 Python 3.10 或 3.11 环境**。本项目提供 `requirements-proassist.txt` 推理候选依赖：保留用户已工作的 PyTorch 2.11.0+cu128 / torchvision 0.26.0+cu128，采用官方代码对应的 Transformers 4.43.1、PEFT 0.11.1；该新旧组合尚未在服务器上跑通真实模型，不是验证过的锁文件。不要安装本项目的 Qwen `requirements.txt`，也不要安装 ProAssist 官方整套旧版训练/演示依赖，后者会要求 torch 2.3.1，并包含锁定旧 torch 的 vLLM。
 
@@ -315,7 +317,7 @@ CUDA_VISIBLE_DEVICES=1 python run_proassist.py \
 检查 `*.jsonl` 中的 `raw_response`、`text`、`parse_error`、`hit_token_limit`；确认加载和格式正常后，使用**新的输出目录**，去掉 `--max-seconds 30` 并加 `--limit 0` 运行全部视频。`--device-index` 指 CUDA_VISIBLE_DEVICES 后的可见设备编号，默认 0。输出目录必须不存在，避免覆盖已有实验。
 
 - 默认 `--protocol per_recipe_step`：每步从人工 Instruction 时间重置视频上下文；完成后转下一步的人工 Instruction 起点。若始终未完成，在下一条人工 Instruction 边界重置，保留该步未完成结果。模型不读取参考 Feedback、Success 或用户对话。
-- `--protocol full_recipe`：从 0 秒连续播放，仅在模型输出有效 Success 时注入下一条指令，不读取人工时间戳；步骤切换保留上下文。指令只在开始或切换时注入，静默帧不追加用户查询。
+- `--protocol full_recipe`：从 0 秒连续播放，仅在模型输出有效 Success 时注入下一条指令，不读取人工时间戳；步骤切换保留缓存并按需摘要。指令只在开始或切换时注入，静默帧不追加用户查询。
 - 自由文本到评测事件的映射采用**本地前缀提示协议**：要求发言为单条 `Feedback: ...` 或 `Success: ...`；静默不产生事件，不符合格式的发言保留日志并标记解析错误，不猜测其语义，不强制推进。前缀提示可能影响原模型行为。成功确认保留模型原文，未调用额外裁判模型。
 - `config.json` 明确标记 `paper_exact_reproduction=false`。没有声称该提示词、参数、采样或步骤调度是论文表 3 的原始实现，也没有声称 I1 就是表 3 使用的版本。
 

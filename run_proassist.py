@@ -13,7 +13,8 @@ import sys
 import tempfile
 from types import SimpleNamespace
 
-from run_inference import load_samples, recipe_steps, save_json
+from run_inference import (load_samples, recipe_steps, save_json,
+                           add_visual_arguments, add_data_arguments, resize_frame, continuation_state)
 from run_full_recipe import instruction_texts
 
 
@@ -105,10 +106,10 @@ class ProAssistBackend:
         self.runner = StreamInferenceRunner.build(
             model=self.model, tokenizer=self.tokenizer, fps=args.sample_fps,
             eval_max_seq_len=args.context_length or sys.maxsize,
-            reserved_seq_len=args.max_new_tokens + 32,
+            reserved_seq_len=max(128, args.max_new_tokens + 32),
             not_talk_threshold=args.not_talk_threshold, eval_name='ego_mc_bench')
-        self.metadata = dict(input_image_policy='square_resize_then_model_vision_processor',
-                             context_policy='complete_step_cache' if not args.context_length else 'upstream_summarize_and_drop',
+        self.metadata = dict(input_image_policy='aspect_ratio_thumbnail_then_model_vision_processor',
+                             context_policy='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',
                              output_length_policy='eos_only' if not args.max_new_tokens else 'token_cap',
                              num_tokens_per_img=self.model.config.num_tokens_per_img,
                              use_binary_decision_head=self.model.config.use_binary_decision_head,
@@ -130,10 +131,8 @@ class ProAssistBackend:
 
     def step(self, rgb, timestamp):
         torch = self.torch
-        from PIL import Image
         import numpy as np
-        size = getattr(self.args, 'max_side', 224)
-        rgb = np.asarray(Image.fromarray(rgb).resize((size, size)))
+        rgb = np.asarray(resize_frame(rgb, getattr(self.args, 'max_side', 448)))
         messages = self.pending
         ids, input_str = self.runner.processor.get_input_sequence(1, messages, self.first)
         self.first, self.pending = False, []
@@ -252,30 +251,24 @@ def run_video(sample, args, backend, cap, log):
                 backend.reset(steps[step_id]['instruction'])
             else:
                 append('Instruct: ' + steps[step_id]['instruction'], timestamp)
-                backend.reset(steps[step_id]['instruction'])
+                backend.set_instruction(steps[step_id]['instruction'])
     return result
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--data-root', type=Path, required=True)
-    p.add_argument('--output-dir', type=Path, required=True)
+    add_data_arguments(p)
     p.add_argument('--proassist-root', type=Path, help='Official ProAssist source checkout')
     p.add_argument('--model-path', type=Path, help='Local ProAssist I1/I5/I10 checkpoint')
     p.add_argument('--base-model-path', type=Path)
     p.add_argument('--vision-model-path', type=Path, help='Vision model matching checkpoint vision_pretrained')
     p.add_argument('--protocol', choices=('per_recipe_step', 'full_recipe'), default='per_recipe_step')
-    p.add_argument('--sample-fps', type=float, default=1)
+    add_visual_arguments(p, include_frame_limit=False)
+    p.set_defaults(sample_fps=2)
     p.add_argument('--not-talk-threshold', type=float, default=0.3)
-    p.add_argument('--context-length', type=int, default=0, help='0 = complete step cache; positive = summarize/drop budget')
-    p.add_argument('--max-new-tokens', type=int, default=0, help='0 = EOS-only generation')
-    p.add_argument('--max-side', type=int, default=224, help='Square RGB size before model vision processing')
+    p.add_argument('--context-length', type=int, default=4096, help='Streaming token context budget; 0 disables upstream progress summarization')
     p.add_argument('--device-index', type=int, default=0)
     p.add_argument('--attn-implementation', choices=('sdpa', 'eager', 'flash_attention_2'), default='sdpa')
-    p.add_argument('--video-ids', nargs='+')
-    p.add_argument('--start-video-id')
-    p.add_argument('--limit', type=int, default=1)
-    p.add_argument('--max-seconds', type=float, default=0, help='Absolute video cutoff; 0 = all')
     p.add_argument('--dry-run', action='store_true', help='Decode only; no model or valid predictions')
     args = p.parse_args()
     if (not all(math.isfinite(x) for x in (args.sample_fps, args.max_seconds, args.not_talk_threshold))
@@ -290,11 +283,16 @@ def main():
             if path is None or not path.is_dir():
                 p.error(f'--{key.replace("_", "-")} must be an existing local directory')
     samples = load_samples(args.data_root, args.video_ids, args.limit, args.start_video_id)
-    args.output_dir.mkdir(parents=True, exist_ok=False)
+    results = []
+    if args.continue_run:
+        samples, results = continuation_state(args.output_dir, samples)
+    args.output_dir.mkdir(parents=True, exist_ok=args.overwrite or args.continue_run)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}
     config.update(implementation='local_proassist_adapter', paper_exact_reproduction=False,
                   response_mapping='strict_tagged_speech_no_helper_llm', system_prompt=SYSTEM_PROMPT,
-                  context_handling='complete_step_cache' if not args.context_length else 'upstream_summarize_and_drop', offline=True,
+                  context_handling='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',
+                  context_frame_limit=None, historical_frame_policy='incremental_kv_with_generated_dialogue',
+                  summary_reserved_tokens=max(128, args.max_new_tokens + 32), offline=True,
                   reference='https://github.com/pro-assist/ProAssist',
                   instruction_timestamps_used=args.protocol == 'per_recipe_step',
                   feedback_and_success_labels_used=False)
@@ -306,11 +304,10 @@ def main():
             config.update(backend.metadata)
             save_json(args.output_dir / 'config.json', config)
         import cv2
-        results = []
         for sample in samples:
             cap = cv2.VideoCapture(str(args.data_root / 'videos' / (sample['video_id'] + '.MP4')))
             try:
-                with (args.output_dir / (sample['video_id'] + '.jsonl')).open('x') as log:
+                with (args.output_dir / (sample['video_id'] + '.jsonl')).open('w') as log:
                     result = run_video(sample, args, backend, cap, log)
             finally:
                 cap.release()

@@ -13,14 +13,14 @@ from run_proassist import ProAssistBackend, parse_event, run_video
 
 
 class ProAssistTests(unittest.TestCase):
-    def run_sample(self, protocol='full_recipe', replies=(), times=None, dry=False):
+    def run_sample(self, protocol='full_recipe', replies=(), times=None, dry=False, count=12):
         import cv2
         import numpy as np
         sample = dict(video_id='v', texts=['FIRST', 'SECRET', 'SECOND'],
                       text_types=['Instruction', 'Feedback', 'Instruction'],
                       text_timestamps=times or [1, 2, 4])
         cap = SimpleNamespace(isOpened=lambda: True,
-            get=lambda prop: 2 if prop == cv2.CAP_PROP_FPS else 12,
+            get=lambda prop: 2 if prop == cv2.CAP_PROP_FPS else count,
             set=lambda *args: None,
             read=lambda: (True, np.zeros((8, 8, 3), dtype=np.uint8)))
         class Backend:
@@ -47,7 +47,7 @@ class ProAssistTests(unittest.TestCase):
         result, logs, backend = self.run_sample(replies=replies)
         self.assertEqual(result['pred_timestamps'], [0, .5, 1, 1, 2])
         self.assertEqual(result['pred_texts'][3], 'Instruct: SECOND')
-        self.assertEqual(backend.messages, [('reset', 'FIRST'), ('reset', 'SECOND')])
+        self.assertEqual(backend.messages, [('reset', 'FIRST'), ('next', 'SECOND')])
         self.assertEqual(len(logs), 5)
         self.assertEqual(result, self.run_sample(replies=replies, times=[90, 100, 200])[0])
         self.assertNotIn('SECRET', json.dumps(logs))
@@ -58,7 +58,7 @@ class ProAssistTests(unittest.TestCase):
         self.assertEqual(result['pred_texts'], ['Instruct: FIRST', 'Feedback: Fix it.'])
         self.assertTrue(all(row['step_id'] == 0 for row in logs))
         self.assertIsNotNone(logs[0]['parse_error'])
-        self.assertEqual(len(backend.messages), 1)
+        self.assertEqual(set(backend.messages), {('reset', 'FIRST')})
 
     def test_per_step_resets_at_next_instruction_without_success(self):
         result, logs, backend = self.run_sample(protocol='per_recipe_step')
@@ -78,6 +78,11 @@ class ProAssistTests(unittest.TestCase):
         self.assertEqual(result['pred_texts'], [])
         self.assertEqual(len(logs), 12)
 
+    def test_long_stream_processes_each_frame_once_without_reset(self):
+        _, logs, backend = self.run_sample(count=160)
+        self.assertEqual([r['frame_index'] for r in logs], list(range(160)))
+        self.assertEqual(backend.messages, [('reset', 'FIRST')])
+
     def test_strict_event_parser(self):
         self.assertIsNone(parse_event('  '))
         self.assertEqual(parse_event('Feedback: Add salt.'), 'Feedback: Add salt.')
@@ -91,13 +96,14 @@ class ProAssistTests(unittest.TestCase):
         calls = []
         buffer = torch.tensor([[5, 6]])
         config = SimpleNamespace(num_tokens_per_img=1, use_binary_decision_head=False,
-                                 eos_token_id=6)
+                                 eos_token_id=6, w2t_target_id=7)
         def generate(embeds, past, **kwargs):
             calls.append(('generate', past, kwargs))
             buffer[:] = torch.tensor([[5, 6]])
             return buffer, 'cache'
         model = SimpleNamespace(config=config, device='cpu', dtype=torch.float32,
             eval=lambda: None, joint_embed=lambda **kw: kw,
+            forward=lambda **kw: SimpleNamespace(past_key_values='prefill-cache'),
             fast_greedy_generate=generate)
         def add_last(inputs, last):
             calls.append(('last', None if last is None else last.clone()))
@@ -107,7 +113,7 @@ class ProAssistTests(unittest.TestCase):
             add_last_assistant_message=add_last,
             cleanup_text=lambda raw: ('Feedback: Fix it.', 'assistant'))
         def manage(frame, past, last):
-            self.assertEqual(frame.model_inputs['images'].shape, (1, 3, 224, 224))
+            self.assertEqual(frame.model_inputs['images'].shape, (1, 3, 8, 8))
             # Simulate upstream summary overwriting the shared generation buffer.
             buffer.fill_(99)
             return 'managed-cache', last
@@ -117,9 +123,15 @@ class ProAssistTests(unittest.TestCase):
             cfg = json.loads((Path(path) / 'config.json').read_text())
             self.assertIn('Meta-Llama-3', cfg['llm_pretrained'])
             self.assertIn('siglip', cfg['vision_pretrained'])
+            self.assertEqual(cfg['exceed_context_handling'], 'summarize_and_drop')
             self.assertTrue((Path(path) / 'adapter_model.safetensors').is_file())
             self.assertTrue(Path(cfg['llm_pretrained']).is_dir())
             return model, tokenizer
+        def build_runner(**kwargs):
+            self.assertEqual(kwargs['fps'], 2)
+            self.assertEqual(kwargs['eval_max_seq_len'], 4096)
+            self.assertEqual(kwargs['reserved_seq_len'], 132)
+            return runner
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             for name in ('adapter', 'base', 'encoder'):
@@ -137,7 +149,7 @@ class ProAssistTests(unittest.TestCase):
                 'mmassist.eval': SimpleNamespace(),
                 'mmassist.eval.runners': SimpleNamespace(),
                 'mmassist.eval.runners.stream_inference': SimpleNamespace(
-                    StreamInferenceRunner=SimpleNamespace(build=lambda **kw: runner))}
+                    StreamInferenceRunner=SimpleNamespace(build=build_runner))}
             with patch.dict('sys.modules', modules), patch.dict(os.environ):
                 backend = ProAssistBackend(args)
                 try:

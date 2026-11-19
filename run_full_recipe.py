@@ -3,6 +3,7 @@
 Local implementation of the paper's full-recipe setting; no annotation timestamps
 control the video clock or instruction transitions. Existing per-step entry unchanged.
 """
+from run_inference import add_visual_arguments, add_data_arguments, resize_frame
 import argparse
 import copy
 import json
@@ -49,25 +50,13 @@ class FullRecipeState:
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--data-root', type=Path, required=True)
+    add_data_arguments(p)
     p.add_argument('--model-path', default='/datasets/Hf_model/Qwen3-VL-2B-Instruct')
-    p.add_argument('--output-dir', type=Path, required=True)
-    p.add_argument('--overwrite', action='store_true',
-                   help='Allow an existing output directory; replace files produced by this run')
-    p.add_argument('--continue', dest='continue_run', action='store_true',
-                   help='Reuse output directory; rerun the last started video and continue, preserving earlier predictions')
-    p.add_argument('--video-ids', nargs='+')
-    p.add_argument('--start-video-id', help='Start at this video (inclusive), in annotation order; use --limit 0 for all remaining videos')
-    p.add_argument('--limit', type=int, default=1)
-    p.add_argument('--max-seconds', type=float, default=0, help='Absolute video cutoff, 0 = all')
     p.add_argument('--interval', type=float, default=5, help='Query cadence in seconds; paper turn-based baseline: 5 seconds')
     p.add_argument('--mistake-prompt', choices=('detailed', 'simple'), default='detailed',
                    help='Appendix D: detailed for Qwen3-VL/Qwen3.5/Gemini; simple for older baselines')
     add_feedback_arguments(p)
-    p.add_argument('--sample-fps', type=float, default=1)
-    p.add_argument('--max-frames', type=int, default=32, help='0 = complete observed step prefix; positive = uniform frame cap')
-    p.add_argument('--max-side', type=int, default=448, help='Maximum image side; preserve aspect ratio without upscaling')
-    p.add_argument('--max-new-tokens', type=int, default=0, help='0 = EOS-only generation; positive = token cap')
+    add_visual_arguments(p)
     p.add_argument('--thinking', choices=('default', 'on', 'off'), default='off',
                    help='Chat-template thinking mode: default = omit the switch; on/off = explicit '
                         'enable_thinking (requires template support). Default: off, as before')
@@ -89,7 +78,6 @@ def main():
         if not instruction_texts(s):
             raise ValueError(f"No instructions: {s['video_id']}")
     import cv2
-    from PIL import Image
     a.output_dir.mkdir(parents=True, exist_ok=a.overwrite or a.continue_run)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
     config.update(protocol='full_recipe', reference='arXiv:2606.09547v2',
@@ -157,8 +145,7 @@ def main():
                         ok, frame = cap.read()
                         if not ok:
                             raise RuntimeError(f'Cannot decode {video_id}, frame {index}')
-                        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                        image.thumbnail((a.max_side, a.max_side))
+                        image = resize_frame(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), a.max_side)
                         frame_path = frame_dir / f'{index:09d}.png'
                         if a.overwrite or a.continue_run or not frame_path.exists():
                             image.save(frame_path)
