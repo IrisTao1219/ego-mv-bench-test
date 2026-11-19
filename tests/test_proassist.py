@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from evaluate_official import validate_predictions
-from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens, legacy_system_rules as system_rules, instruction_prompt, parse_stage_response
+from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens, legacy_system_rules as system_rules, instruction_prompt
 
 
 class ProAssistTests(unittest.TestCase):
@@ -53,10 +53,10 @@ class ProAssistTests(unittest.TestCase):
         self.assertEqual(result, self.run_sample(replies=replies, times=[90, 100, 200])[0])
         self.assertNotIn('SECRET', json.dumps(logs))
 
-    def test_all_non_yes_speech_is_feedback_without_advancing(self):
+    def test_negative_speech_is_filtered_without_advancing(self):
         result, logs, backend = self.run_sample(replies=['Great job!', 'No', 'Not yet', 'Fix it.'])
         self.assertEqual(result['pred_texts'], ['Instruct: FIRST', 'Feedback: Great job!',
-                                              'Feedback: No', 'Feedback: Not yet', 'Feedback: Fix it.'])
+                                              'Feedback: Fix it.'])
         self.assertTrue(all(row['step_id'] == 0 for row in logs))
         self.assertTrue(all(row['parse_error'] is None for row in logs))
         self.assertEqual(backend.messages, [('reset', 'FIRST')])
@@ -87,9 +87,12 @@ class ProAssistTests(unittest.TestCase):
     def test_native_speech_event_mapping(self):
         for text in ('', '  ', '\n'):
             self.assertIsNone(parse_event(text))
-        for text in ('Yes', 'yes. Done.', 'YES, ready.', 'yEs: finished'):
+        for text in ('Yes', 'yes. Done.', 'YES, ready.', 'yEs: finished', 'YES. No mistake.'):
             self.assertEqual(parse_event(text), 'Success: Step complete.')
-        for text in ('No', 'Not yet', 'Yesterday', 'Add salt.', 'I said yes earlier.'):
+        for text in ('No', 'NO.', 'There is no mistake.', 'Not yet',
+                     'Feedback: nOt YeT, mix it well.', 'not\nyet'):
+            self.assertIsNone(parse_event(text))
+        for text in ('Now mix it.', 'Not ready.', 'Yesterday', 'Add salt.', 'I said yes earlier.'):
             self.assertEqual(parse_event(text), 'Feedback: ' + text)
         self.assertEqual(parse_event('  Add salt.\nUse a teaspoon.  '),
                          'Feedback: Add salt.\nUse a teaspoon.')
@@ -99,18 +102,6 @@ class ProAssistTests(unittest.TestCase):
         self.assertEqual(cache_tokens(None), 0)
         self.assertEqual(cache_tokens(((torch.zeros(1, 2, 19, 3), None),)), 19)
         self.assertEqual(cache_tokens(SimpleNamespace(get_seq_length=lambda: 27)), 27)
-    def test_stage_specific_yes_no(self):
-        self.assertEqual(parse_stage_response('yes. Done.', 'completion')[1],
-                         'Success: Step complete.')
-        self.assertEqual(parse_stage_response('YES. Mix it well.', 'mistake')[1],
-                         'Feedback: Mix it well.')
-        self.assertEqual(parse_stage_response('no', 'completion')[0], {'completed': False, 'reason': ''})
-        for raw in ('', 'Feedback: Not yet.', 'Great job!', 'YES'):
-            parsed, event, error = parse_stage_response(raw, 'completion')
-            self.assertIsNone(parsed)
-            self.assertIsNone(event)
-            self.assertTrue(error)
-
     def test_backend_checkpoint_paths_and_stream_cache(self):
         import torch
         import numpy as np
@@ -130,7 +121,7 @@ class ProAssistTests(unittest.TestCase):
         def add_last(inputs, last):
             calls.append(('last', None if last is None else last.clone()))
             return inputs
-        cleaned_replies = iter(['NO', 'YES. Fix it.', 'yes. Done.', 'NO', 'NO'])
+        cleaned_replies = iter(['Fix it.', 'yes. Done.', ''])
         processor = SimpleNamespace(
             get_input_sequence=lambda n, messages, first: (torch.tensor([[1]]), str(messages)),
             add_last_assistant_message=add_last,
@@ -183,9 +174,7 @@ class ProAssistTests(unittest.TestCase):
                 backend = ProAssistBackend(args)
                 try:
                     backend.reset('FIRST')
-                    first_responses = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), 0)['responses']
-                    self.assertEqual([r['stage'] for r in first_responses], ['completion', 'mistake'])
-                    first = first_responses[-1]
+                    first = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), 0)['responses'][0]
                     second = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), .5)['responses'][0]
                     backend.set_instruction('SECOND')
                     third = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), 1)['responses'][0]
@@ -193,23 +182,20 @@ class ProAssistTests(unittest.TestCase):
                     self.assertEqual(first['accepted'], 'Feedback: Fix it.')
                     self.assertEqual(second['accepted'], 'Success: Step complete.')
                     self.assertIsNone(third['accepted'])
-                    self.assertIsNone(first_responses[0]['accepted'])
-                    self.assertEqual(first_responses[0]['input_messages'], [
+                    self.assertEqual(first['input_messages'], [
+                        {'role': 'system', 'content': system_rules(args)},
                         {'role': 'user', 'content': instruction_prompt('FIRST')}])
-                    self.assertTrue(first_responses[0]['input_str'].endswith(
-                        '<|start_header_id|>assistant<|end_header_id|>\n\n'))
-                    self.assertIn('Fix', first['raw_response'])
-                    self.assertEqual(second['input_messages'], [
-                        {'role': 'user', 'content': instruction_prompt('FIRST')}])
+                    self.assertEqual(second['input_messages'], [])
+                    self.assertEqual(second['prompt'], '')
                     self.assertEqual(third['input_messages'], [
                         {'role': 'user', 'content': instruction_prompt('SECOND')}])
                     self.assertEqual(first['not_talk_probability'], .25)
-                    self.assertEqual(first_responses[0]['kv_cache_tokens_before'], 0)
+                    self.assertEqual(first['kv_cache_tokens_before'], 0)
                     generated = [c for c in calls if c[0] == 'generate']
                     self.assertEqual([c[1] for c in generated],
-                                     [None, 'managed-cache-1', 'managed-cache-2', 'managed-cache-3', 'managed-cache-4'])
-                    self.assertEqual(backend.past, 'managed-cache-5')
-                    self.assertTrue(all(r['stage'] == 'completion' for r in (second, third)))
+                                     [None, 'managed-cache-1', 'managed-cache-2'])
+                    self.assertEqual(backend.past, 'managed-cache-3')
+                    self.assertTrue(all(r['stage'] == 'stream' for r in (first, second, third)))
                     self.assertNotIn('answer ‘NO’', system_rules(args))
                     self.assertNotIn('Has the person already completed', system_rules(args))
                     self.assertEqual((root/'adapter/config.json').read_text(), original)

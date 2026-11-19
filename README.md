@@ -318,11 +318,10 @@ CUDA_VISIBLE_DEVICES=1 python run_proassist.py \
 
 - 默认 `--protocol per_recipe_step`：每步从人工 Instruction 时间重置视频上下文；完成后转下一步的人工 Instruction 起点。若始终未完成，在下一条人工 Instruction 边界重置，保留该步未完成结果。模型不读取参考 Feedback、Success 或用户对话。
 - `--protocol full_recipe`：从 0 秒连续播放，仅在模型输出有效 Success 时注入下一条指令，不读取人工时间戳；步骤切换保留缓存并按需摘要。每帧的查询提示包含当前指令；只在模型有效 Success 后切换到下一条指令。
-- 两阶段显式问答：每个采样帧先在 user 中发送与 Qwen 相同的完成检测 prompt；明确 NO 才在 user 中追加错误检测 prompt，默认 detailed，复用 Qwen 的最近一分钟反馈数组及显式去重规则。没有额外 system 任务规则。追问不重复输入图像，使用同一流式 KV 上下文。
-- 完成阶段 YES 加理由映射为固定 `Success: Step complete.`，结束当前步骤；错误阶段 YES 加纠错内容映射为 `Feedback: <纠错内容>`；两阶段 NO 均无事件。YES/NO 忽略大小写；缺少前缀、空输出或缺少肯定解释均记录 parse_error，完成阶段无效时不追问错误、不切步。
-- `--mistake-prompt detailed|simple` 与 Qwen 选择相同的错误检测模板，默认 detailed。当前 Qwen 的显式去重规则是本地扩展，不是论文逐字原文；ProAssist 的流式 KV 与采样也不代表论文完整复现。
-- 显式问题关闭自主静默门控（有效 not_talk_threshold=1.0；原参数仍可解析但不作用于两阶段问题）。生成仍按 EOS 或 max-new-tokens 停止。摘要后保留当前步骤知识。
-- 日志 `stage` 为 completion 或 mistake，每阶段记录 user prompt、原始回答、解析结果与错误、缓存长度。config 记录两阶段策略和有效门控阈值。
+- 单路自主发言：开始时发送 system 错误定义和约束，以及 user 当前步骤和完成问题；步骤切换时更新 user，其余帧仅输入画面。完成与纠错在同一次生成中判断，不再进行两阶段追问，也不添加显式 assistant 回答起始标记。
+- 输出以独立单词 YES 开头（忽略大小写）时，记录固定 `Success: Step complete.` 并切换步骤；其余回答中包含独立单词 NO 或短语 NOT YET（忽略大小写）时不记录反馈，其他非空正文记录为 Feedback，空正文不产生事件。原始回答保留在日志中。
+- `--mistake-prompt detailed|simple` 选择错误定义详略，默认 detailed。完成问题及完成、反馈、静默规则集中在 user；system 保留错误定义和判断约束。这是本地流式适配，并非论文逐字提示。
+- 恢复原生发言门控，默认 `--not-talk-threshold 0.3`。KV 历史及官方摘要机制保留，摘要续接保留当前 user 问题。日志 stage 固定为 stream，后续仅画面帧的 prompt 为空、input_messages=[] 是正常现象。config 的 prompt_version 为 native_speech_user_completion_question_negative_filter_v6。
 
 `predictions.json` 与现有官方评测入口兼容。全量推理结束后，可在原有**评测环境**执行：
 
