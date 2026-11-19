@@ -120,23 +120,20 @@ class ProAssistTests(unittest.TestCase):
                          prompt_for('completion', 'FIRST', 0, []))
         self.assertIsNone(parse_event('', 'mistake'))
 
-    def test_silence_and_bad_completion_do_not_trigger_mistake_check(self):
-        import torch
-        from unittest.mock import Mock
+    def test_silence_and_bad_completion_only_prefill_mistake_stream(self):
+        from unittest.mock import Mock, call
         for raw in ('', 'Great job!'):
             backend = ProAssistBackend.__new__(ProAssistBackend)
-            backend.torch = torch
-            backend.args = SimpleNamespace(context_length=4096)
             backend.recent = [{'time': 0, 'feedback': 'old feedback'}]
             completion = dict(parsed=None, accepted=None, raw_response=raw)
-            backend._query = Mock(return_value=(completion, {'images': 'frame'}))
-            backend.past, backend.last = 'old-cache', 'old-last'
-            backend.runner = SimpleNamespace(manage_kv_cache=Mock(
-                return_value=('summary-cache', 'summary-message')))
+            backend._run_stage = Mock(side_effect=[completion,
+                dict(context_only=True, kv_cache_tokens_after_management=17)])
             self.assertEqual(backend.step('rgb', 61)['responses'], [completion])
-            backend._query.assert_called_once_with('rgb', 61, 'completion')
+            self.assertEqual(backend._run_stage.call_args_list, [
+                call('rgb', 61, 'completion'),
+                call('rgb', 61, 'mistake', context_only=True)])
             self.assertEqual(backend.recent, [])
-            self.assertEqual((backend.past, backend.last), ('summary-cache', 'summary-message'))
+            self.assertTrue(completion['mistake_context_only'])
 
     def test_cache_size_and_shared_system_rules(self):
         import torch
@@ -144,8 +141,11 @@ class ProAssistTests(unittest.TestCase):
         self.assertEqual(cache_tokens(((torch.zeros(1, 2, 19, 3), None),)), 19)
         self.assertEqual(cache_tokens(SimpleNamespace(get_seq_length=lambda: 27)), 27)
         args = SimpleNamespace(mistake_prompt='detailed', feedback_dedup_rule='explicit')
-        rules = system_rules(args)
-        self.assertIn(prompt_for('completion', '[recipe_step]', 0, []), rules)
+        rules = system_rules(args, 'mistake')
+        completion_rules = system_rules(args, 'completion')
+        self.assertIn(prompt_for('completion', '[recipe_step]', 0, []), completion_rules)
+        self.assertNotIn('remain silent', completion_rules)
+        self.assertNotIn('Has the person already completed', rules)
         self.assertIn('[prev_detected_mistakes]', rules)
         self.assertIn('remain silent', rules)
         self.assertNotIn('mistakes:[]', rules)
@@ -161,7 +161,7 @@ class ProAssistTests(unittest.TestCase):
             model.last_not_talk_prob = torch.tensor(.25)
             calls.append(('generate', past, kwargs))
             buffer[:] = torch.tensor([[5, 6]])
-            return buffer, 'cache'
+            return buffer, 'cache-' + str(sum(c[0] == 'generate' for c in calls))
         model = SimpleNamespace(config=config, device='cpu', dtype=torch.float32,
             eval=lambda: None, joint_embed=lambda **kw: kw,
             forward=lambda **kw: SimpleNamespace(past_key_values='prefill-cache'),
@@ -178,7 +178,7 @@ class ProAssistTests(unittest.TestCase):
             self.assertEqual(frame.model_inputs['images'].shape, (1, 3, 8, 8))
             # Simulate upstream summary overwriting the shared generation buffer.
             buffer.fill_(99)
-            return 'managed-cache', last
+            return 'managed-' + past, last
         runner = SimpleNamespace(processor=processor, manage_kv_cache=manage)
         tokenizer = SimpleNamespace(decode=lambda ids: str(ids.tolist()), img_sep_token_id=6)
         def build(path, rank):
@@ -229,17 +229,23 @@ class ProAssistTests(unittest.TestCase):
                     self.assertEqual(stages[1]['accepted'], 'Feedback: Fix it.')
                     self.assertEqual(second['responses'][0]['accepted'], 'Success: Step complete.')
                     self.assertEqual([m['role'] for m in stages[0]['input_messages']], ['system', 'user'])
-                    self.assertEqual(stages[0]['input_messages'][0]['content'], system_rules(args))
+                    self.assertEqual(stages[0]['input_messages'][0]['content'], system_rules(args, 'completion'))
                     self.assertIn('recipe_step: FIRST', stages[0]['prompt'])
                     self.assertIn('Active check: mistake', stages[1]['prompt'])
-                    self.assertNotIn('system', [m['role'] for m in stages[1]['input_messages']])
+                    self.assertEqual(stages[1]['input_messages'][0],
+                                     {'role': 'system', 'content': system_rules(args, 'mistake')})
                     self.assertNotIn('system', [m['role'] for m in second['responses'][0]['input_messages']])
                     self.assertIn('recipe_step: SECOND', second['responses'][0]['prompt'])
                     self.assertEqual(stages[0]['not_talk_probability'], .25)
                     self.assertEqual(stages[0]['kv_cache_tokens_before'], 0)
                     generated = [c for c in calls if c[0] == 'generate']
-                    self.assertEqual([c[1] for c in generated], [None, 'cache', 'managed-cache'])
-                    self.assertEqual([c for c in calls if c[0] == 'last'][1][1].tolist(), [[6]])
+                    self.assertEqual([c[1] for c in generated], [None, None, 'managed-cache-1'])
+                    self.assertIsNone([c for c in calls if c[0] == 'last'][1][1])
+                    self.assertIsNot(backend.states['completion']['runner'],
+                                     backend.states['mistake']['runner'])
+                    self.assertEqual(backend.states['completion']['past'], 'managed-cache-3')
+                    self.assertEqual(backend.states['mistake']['past'], 'managed-prefill-cache')
+                    self.assertTrue(second['responses'][0]['mistake_context_only'])
                     self.assertEqual((root/'adapter/config.json').read_text(), original)
                 finally:
                     backend.close()

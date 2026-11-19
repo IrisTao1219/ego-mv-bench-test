@@ -4,6 +4,7 @@ The shared turn-based task prompts and instruction scheduling are local adaptati
 not the unpublished Ego-MC-Bench authors' ProAssist evaluation implementation.
 """
 import argparse
+import copy
 import json
 import math
 import os
@@ -20,16 +21,14 @@ from run_inference import (load_samples, recipe_steps, save_json,
 from run_full_recipe import instruction_texts
 
 
-def system_rules(args):
-    """Reuse task definitions, with changing values supplied by the user turn."""
-    completion = prompt_for('completion', '[recipe_step]', 0, [])
-    mistake = prompt_for('mistake', '[recipe_step]', 0, [], args.mistake_prompt,
-                         explicit_dedup=args.feedback_dedup_rule == 'explicit',
-                         silent_negative=True)
-    mistake = mistake.replace('mistakes:[]', 'mistakes:[prev_detected_mistakes]')
-    return ('Use recipe_step and prev_detected_mistakes from the latest user message. '
-            'Answer only the active check named by that message.\n\n'
-            'Completion check rules:\n' + completion + '\n\nMistake check rules:\n' + mistake)
+def system_rules(args, stage):
+    """Each stream receives only the rules for its own check."""
+    rules = prompt_for(stage, '[recipe_step]', 0, [], args.mistake_prompt,
+                       explicit_dedup=args.feedback_dedup_rule == 'explicit',
+                       silent_negative=True)
+    rules = rules.replace('mistakes:[]', 'mistakes:[prev_detected_mistakes]')
+    return ('Use recipe_step and prev_detected_mistakes from the latest user message.\n\n'
+            + rules)
 
 
 def cache_tokens(past):
@@ -128,21 +127,22 @@ class ProAssistBackend:
                              torch_version=torch.__version__)
 
     def reset(self, instruction):
-        self.past = self.last = None
-        self.first = True
-        self.recent = []
+        self.states = {}
+        for stage in ('completion', 'mistake'):
+            runner = copy.copy(self.runner)
+            runner.init_key_values_to_keep = None
+            runner.initial_sys_prompt = system_rules(self.args, stage)
+            self.states[stage] = dict(past=None, last=None, first=True, runner=runner)
         self.set_instruction(instruction)
-        self.runner.init_key_values_to_keep = None
         self.model.last_not_talk_prob = None
 
     def set_instruction(self, instruction):
         self.instruction = instruction
         self.recent = []
-        # Keep the same completion task in the upstream summary continuation.
-        self.runner.initial_sys_prompt = system_rules(self.args)
-        self.runner.knowledge = 'Task knowledge: Current recipe step: ' + instruction
+        for state in self.states.values():
+            state['runner'].knowledge = 'Task knowledge: Current recipe step: ' + instruction
 
-    def _query(self, rgb, timestamp, stage):
+    def _query(self, rgb, timestamp, stage, context_only=False):
         began = time.monotonic()
         torch = self.torch
         import numpy as np
@@ -174,6 +174,13 @@ class ProAssistBackend:
         self.model.last_not_talk_prob = None
         with torch.inference_mode():
             embeds = self.model.joint_embed(**inputs)
+            if context_only:
+                out = self.model.forward(inputs_embeds=embeds, past_key_values=self.past,
+                                         use_cache=True, return_dict=True)
+                self.past = out.past_key_values
+                self.last = (torch.tensor([[self.model.config.w2t_target_id]], device=self.model.device)
+                             if self.tokenizer.img_sep_token_id is not None else None)
+                return dict(context_only=True, accepted=None), inputs
             if self.args.max_new_tokens:
                 output, self.past = self.model.fast_greedy_generate(
                     embeds, self.past, max_length=self.args.max_new_tokens,
@@ -211,21 +218,35 @@ class ProAssistBackend:
                     input_str=input_str, input_messages=messages,
                     latency_seconds=time.monotonic() - began), inputs
 
+    def _run_stage(self, rgb, timestamp, stage, context_only=False):
+        state = self.states[stage]
+        self.past, self.last, self.first = state['past'], state['last'], state['first']
+        self.runner = state['runner']
+        response, inputs = self._query(rgb, timestamp, stage, context_only=context_only)
+        if self.args.context_length:
+            frame = SimpleNamespace(model_inputs=inputs, num_frames=1)
+            with self.torch.inference_mode():
+                self.past, self.last = self.runner.manage_kv_cache(frame, self.past, self.last)
+        response['kv_cache_tokens_after_management'] = cache_tokens(self.past)
+        state.update(past=self.past, last=self.last, first=self.first)
+        return response
+
     def step(self, rgb, timestamp):
         self.recent = feedback_context(self.recent, timestamp)
-        completion, frame_inputs = self._query(rgb, timestamp, 'completion')
+        completion = self._run_stage(rgb, timestamp, 'completion')
         responses = [completion]
-        if completion['parsed'] is not None and not completion['parsed']['completed']:
-            mistake, _ = self._query(None, timestamp, 'mistake')
+        check_mistake = completion['parsed'] is not None and not completion['parsed']['completed']
+        # Both independent streams observe every frame. When completion gates off
+        # mistake generation, only prefill its visual context with a silence token.
+        mistake = self._run_stage(rgb, timestamp, 'mistake', context_only=not check_mistake)
+        if check_mistake:
             responses.append(mistake)
             if mistake['accepted']:
                 self.recent.append({'time': timestamp,
                                     'feedback': mistake['parsed']['feedback'].strip()})
-        if self.args.context_length:
-            frame = SimpleNamespace(model_inputs=frame_inputs, num_frames=1)
-            with self.torch.inference_mode():
-                self.past, self.last = self.runner.manage_kv_cache(frame, self.past, self.last)
-        responses[-1]['kv_cache_tokens_after_management'] = cache_tokens(self.past)
+        else:
+            completion['mistake_context_only'] = True
+            completion['mistake_kv_cache_tokens_after_management'] = mistake['kv_cache_tokens_after_management']
         return dict(responses=responses)
 
     def close(self):
@@ -352,8 +373,9 @@ def main():
                   response_mapping='shared_yes_no_completion_then_mistake',
                   response_format='YES_NO',
                   success_message_policy='fixed_confirmation_reason_logged_only',
-                  task_prompt_policy='shared_rules_system_once_dynamic_user_query_native_silence_not_NO',
-                  system_prompt=system_rules(args),
+                  task_prompt_policy='stage_isolated_system_rules_dynamic_user_query_native_silence_not_NO',
+                  system_prompts={stage: system_rules(args, stage) for stage in ('completion', 'mistake')},
+                  stage_context_policy='independent_kv_and_summary_all_frames',
                   completion_prompt_template=prompt_for('completion', '[recipe_step]', 0, []),
                   feedback_history_policy='current_step_last_60s_exact_text_dedup_latest',
                   context_handling='upstream_summarize_and_drop' if args.context_length else 'complete_stream_cache',
@@ -368,7 +390,7 @@ def main():
             'answer NO', 'remain silent and generate no textual response')
     config.update(mistake_negative_policy='native_silence',
                   message_structure='system_rules_once_user_stage_query_optional_assistant_feedback',
-                  prompt_version=config['prompt_version'] + '_mistake_silence_system_roles_v1',
+                  prompt_version=config['prompt_version'] + '_mistake_silence_isolated_stages_v1',
                   paper_prompt_verbatim=False)
     save_json(args.output_dir / 'config.json', config)
     backend = None
