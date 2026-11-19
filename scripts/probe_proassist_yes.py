@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from run_proassist import ProAssistBackend, system_rules
+from run_proassist import ProAssistBackend, legacy_system_rules as system_rules
 
 CASES = [
     ("eggs_complete", "Crack two eggs into the bowl.",

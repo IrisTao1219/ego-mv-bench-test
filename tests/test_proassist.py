@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from evaluate_official import validate_predictions
-from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens, system_rules, instruction_prompt
+from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens, legacy_system_rules as system_rules, instruction_prompt, parse_stage_response
 
 
 class ProAssistTests(unittest.TestCase):
@@ -99,6 +99,18 @@ class ProAssistTests(unittest.TestCase):
         self.assertEqual(cache_tokens(None), 0)
         self.assertEqual(cache_tokens(((torch.zeros(1, 2, 19, 3), None),)), 19)
         self.assertEqual(cache_tokens(SimpleNamespace(get_seq_length=lambda: 27)), 27)
+    def test_stage_specific_yes_no(self):
+        self.assertEqual(parse_stage_response('yes. Done.', 'completion')[1],
+                         'Success: Step complete.')
+        self.assertEqual(parse_stage_response('YES. Mix it well.', 'mistake')[1],
+                         'Feedback: Mix it well.')
+        self.assertEqual(parse_stage_response('no', 'completion')[0], {'completed': False, 'reason': ''})
+        for raw in ('', 'Feedback: Not yet.', 'Great job!', 'YES'):
+            parsed, event, error = parse_stage_response(raw, 'completion')
+            self.assertIsNone(parsed)
+            self.assertIsNone(event)
+            self.assertTrue(error)
+
     def test_backend_checkpoint_paths_and_stream_cache(self):
         import torch
         import numpy as np
@@ -118,13 +130,16 @@ class ProAssistTests(unittest.TestCase):
         def add_last(inputs, last):
             calls.append(('last', None if last is None else last.clone()))
             return inputs
-        cleaned_replies = iter(['Fix it.', 'yes. Done.', ''])
+        cleaned_replies = iter(['NO', 'YES. Fix it.', 'yes. Done.', 'NO', 'NO'])
         processor = SimpleNamespace(
             get_input_sequence=lambda n, messages, first: (torch.tensor([[1]]), str(messages)),
             add_last_assistant_message=add_last,
             cleanup_text=lambda raw: (next(cleaned_replies), 'assistant'))
         def manage(frame, past, last):
-            self.assertEqual(frame.model_inputs['images'].shape, (1, 3, 8, 8))
+            if 'images' in frame.model_inputs:
+                self.assertEqual(frame.model_inputs['images'].shape, (1, 3, 8, 8))
+            else:
+                self.assertEqual(frame.num_frames, 0)
             # Simulate upstream summary overwriting the shared generation buffer.
             buffer.fill_(99)
             return 'managed-' + past, last
@@ -167,7 +182,9 @@ class ProAssistTests(unittest.TestCase):
                 backend = ProAssistBackend(args)
                 try:
                     backend.reset('FIRST')
-                    first = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), 0)['responses'][0]
+                    first_responses = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), 0)['responses']
+                    self.assertEqual([r['stage'] for r in first_responses], ['completion', 'mistake'])
+                    first = first_responses[-1]
                     second = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), .5)['responses'][0]
                     backend.set_instruction('SECOND')
                     third = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), 1)['responses'][0]
@@ -175,20 +192,21 @@ class ProAssistTests(unittest.TestCase):
                     self.assertEqual(first['accepted'], 'Feedback: Fix it.')
                     self.assertEqual(second['accepted'], 'Success: Step complete.')
                     self.assertIsNone(third['accepted'])
-                    self.assertEqual(first['input_messages'], [
-                        {'role': 'system', 'content': system_rules(args)},
+                    self.assertIsNone(first_responses[0]['accepted'])
+                    self.assertEqual(first_responses[0]['input_messages'], [
                         {'role': 'user', 'content': instruction_prompt('FIRST')}])
-                    self.assertEqual(second['input_messages'], [])
-                    self.assertEqual(second['prompt'], '')
+                    self.assertIn('Fix', first['raw_response'])
+                    self.assertEqual(second['input_messages'], [
+                        {'role': 'user', 'content': instruction_prompt('FIRST')}])
                     self.assertEqual(third['input_messages'], [
                         {'role': 'user', 'content': instruction_prompt('SECOND')}])
                     self.assertEqual(first['not_talk_probability'], .25)
-                    self.assertEqual(first['kv_cache_tokens_before'], 0)
+                    self.assertEqual(first_responses[0]['kv_cache_tokens_before'], 0)
                     generated = [c for c in calls if c[0] == 'generate']
                     self.assertEqual([c[1] for c in generated],
-                                     [None, 'managed-cache-1', 'managed-cache-2'])
-                    self.assertEqual(backend.past, 'managed-cache-3')
-                    self.assertTrue(all(r['stage'] == 'stream' for r in (first, second, third)))
+                                     [None, 'managed-cache-1', 'managed-cache-2', 'managed-cache-3', 'managed-cache-4'])
+                    self.assertEqual(backend.past, 'managed-cache-5')
+                    self.assertTrue(all(r['stage'] == 'completion' for r in (second, third)))
                     self.assertNotIn('answer ‘NO’', system_rules(args))
                     self.assertNotIn('Has the person already completed', system_rules(args))
                     self.assertEqual((root/'adapter/config.json').read_text(), original)
