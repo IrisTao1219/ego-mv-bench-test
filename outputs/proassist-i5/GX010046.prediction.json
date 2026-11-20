@@ -1,0 +1,37 @@
+{
+  "video_id": "GX010046",
+  "pred_texts": [
+    "Instruct: Get two slices of bread and toast them in the toaster until nice and crisp for about one minute.",
+    "Success: Step complete.",
+    "Instruct: You can take both pieces of bread out.",
+    "Success: Step complete.",
+    "Instruct: Now, place the toasted bread on a microwave-safe plate.",
+    "Success: Step complete.",
+    "Instruct: Now spread about two tablespoons of pizza sauce on each slice.",
+    "Success: Step complete.",
+    "Instruct: Spread the pizza sauce evenly on each slice of bread.",
+    "Instruct: Now you should add shredded mozzarella cheese on top of one slice of bread, enough cover it with a thin layer of cheese.",
+    "Success: Step complete.",
+    "Instruct: Now you can add any other toppings that you want in the sandwich.",
+    "Success: Step complete.",
+    "Instruct: Now you can close the sandwich in the microwave safe plate and microwave it for about 45 to 60 seconds, until the cheese has melted.",
+    "Success: Step complete."
+  ],
+  "pred_timestamps": [
+    4.3,
+    4.3,
+    173.4,
+    174.4,
+    188.7,
+    188.7,
+    206.3,
+    206.3,
+    266.95,
+    291.5,
+    291.5,
+    333.1,
+    333.1,
+    394.0,
+    394.0
+  ]
+}

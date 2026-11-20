@@ -44,5 +44,11 @@
   "offline": true,
   "reference": "https://github.com/pro-assist/ProAssist",
   "instruction_timestamps_used": true,
-  "feedback_and_success_labels_used": false
+  "feedback_and_success_labels_used": false,
+  "input_image_policy": "aspect_ratio_thumbnail_then_model_vision_processor",
+  "context_policy": "upstream_summarize_and_drop",
+  "output_length_policy": "eos_only",
+  "num_tokens_per_img": 5,
+  "use_binary_decision_head": false,
+  "torch_version": "2.11.0+cu128"
 }

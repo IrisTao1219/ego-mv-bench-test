@@ -1,0 +1,43 @@
+{
+  "video_id": "GX010066",
+  "pred_texts": [
+    "Instruct: Take two pieces of toast and put them in the toaster. Toast for about three minutes until they are golden brown.",
+    "Success: Step complete.",
+    "Instruct: Now take a microwave-safe mug and crack two eggs into the mug.",
+    "Success: Step complete.",
+    "Instruct: Now add a pinch of salt to the mixture.",
+    "Success: Step complete.",
+    "Instruct: Now add two tablespoons of grated cheese into the mixture.",
+    "Success: Step complete.",
+    "Instruct: Now stir the mixture until the egg is evenly blended.",
+    "Feedback: Not yet, but you're close. Stop stirring and scrape the sides of the bowl to ensure everything is well mixed.",
+    "Instruct: Now microwave the mixture for about 45 seconds, until it is set.",
+    "Success: Step complete.",
+    "Instruct: Now remove the egg mixture and cut it into two pieces and add one half of it on each toast.",
+    "Success: Step complete.",
+    "Instruct: Now you can add one tablespoon of grated cheese on top of each toast.",
+    "Success: Step complete.",
+    "Instruct: Now microwave for around 15 seconds until the cheese is slightly melted.",
+    "Feedback: Not yet, but you're close! To ensure even heating, flip the sandwich over halfway through the microwaving time."
+  ],
+  "pred_timestamps": [
+    1.0,
+    1.0,
+    192.0,
+    192.0,
+    227.0,
+    228.0,
+    242.0,
+    242.0,
+    276.0,
+    276.0,
+    304.0,
+    304.0,
+    407.0,
+    407.0,
+    436.0,
+    436.0,
+    470.0,
+    470.0
+  ]
+}

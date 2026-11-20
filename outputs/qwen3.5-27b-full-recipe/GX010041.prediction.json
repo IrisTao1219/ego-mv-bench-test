@@ -1,0 +1,13 @@
+{
+  "video_id": "GX010041",
+  "pred_texts": [
+    "Instruct: Grab two slices of bread and put them in the toaster. Toast for around a minute.",
+    "Success: Step complete.",
+    "Instruct: Now get the pizza sauce and spread two tablespoons on each slice of bread."
+  ],
+  "pred_timestamps": [
+    0.0,
+    15.0,
+    15.0
+  ]
+}
