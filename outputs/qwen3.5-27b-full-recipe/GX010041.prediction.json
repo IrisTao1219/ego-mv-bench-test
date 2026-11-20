@@ -3,11 +3,31 @@
   "pred_texts": [
     "Instruct: Grab two slices of bread and put them in the toaster. Toast for around a minute.",
     "Success: Step complete.",
-    "Instruct: Now get the pizza sauce and spread two tablespoons on each slice of bread."
+    "Instruct: Now get the pizza sauce and spread two tablespoons on each slice of bread.",
+    "Success: Step complete.",
+    "Instruct: Now spread it evenly on the bread.",
+    "Success: Step complete.",
+    "Instruct: Now cover each slice of bread with shredded mozzarella cheese.",
+    "Success: Step complete.",
+    "Instruct: Add some oregano on top of the cheese toast according to your taste.",
+    "Success: Step complete.",
+    "Instruct: Now add at least 3 to 4 olives to the top of the cheese toasts.",
+    "Success: Step complete.",
+    "Instruct: Now microwave the cheese toast in a microwave-safe utensil for around 45 to 60 seconds."
   ],
   "pred_timestamps": [
     0.0,
     15.0,
-    15.0
+    15.0,
+    175.0,
+    175.0,
+    180.0,
+    180.0,
+    210.0,
+    210.0,
+    280.0,
+    280.0,
+    340.0,
+    340.0
   ]
 }

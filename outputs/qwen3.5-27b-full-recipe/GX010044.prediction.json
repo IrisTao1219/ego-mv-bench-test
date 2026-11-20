@@ -1,0 +1,41 @@
+{
+  "video_id": "GX010044",
+  "pred_texts": [
+    "Instruct: First take a large bowl.",
+    "Success: Step complete.",
+    "Instruct: Add two tablespoons of oil to the bowl.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil.",
+    "Feedback: You are adding spices to the bowl instead of the required oil."
+  ],
+  "pred_timestamps": [
+    0.0,
+    145.0,
+    145.0,
+    155.0,
+    160.0,
+    165.0,
+    170.0,
+    175.0,
+    180.0,
+    185.0,
+    190.0,
+    195.0,
+    200.0,
+    205.0,
+    210.0,
+    215.0,
+    220.0
+  ]
+}

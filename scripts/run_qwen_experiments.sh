@@ -129,4 +129,4 @@ CUDA_VISIBLE_DEVICES=2 python run_proassist.py \
   --data-root ../datasets/ego-mc-bench   --proassist-root ../ProAssist \
   --model-path ../models/ProAssist-Model-L4096-I5   --base-model-path ../models/Llama-3.1-8B-Instruct \
   --vision-model-path ../models/siglip-so400m-patch14-384 \
-  --protocol per_recipe_step   --output-dir outputs/proassist-i5   --limit 0
+  --protocol per_recipe_step   --output-dir outputs/proassist-i5   --limit 0 --paper
