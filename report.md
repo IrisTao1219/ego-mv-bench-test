@@ -1,8 +1,8 @@
 # Qwen 系列与 ProAssist 模型实验结果分析
 
-## 2026-11-19：新增评测指标汇总（custom_metrics v1；2026-11-20 更新）
+## 2026-11-20：全部实验指标汇总（custom_metrics v1）
 
-以下结果直接提取自各实验 `report.txt` 末尾的 Supplementary metrics JSON，未重新运行模型或评测。实验名称使用文件夹名称，视频覆盖不足 39/39 的实验在名称后标注“（未完成）”，状态以本节源报告为准；仅统计已提交视频，不把缺失视频计为失败。per-step 与 full-recipe 分表展示，各表内按模型前缀集中排列，视频列保留各实验覆盖范围，不能跨覆盖范围直接排名，也不能把 full-recipe 与 per-step 当作相同协议比较。比例统一换算为百分数并保留两位小数；时间单位为秒。原始精度见源报告。
+以下结果直接提取自各实验 `report.txt` 末尾的 Supplementary metrics JSON，未重新运行模型或评测。实验名称使用文件夹名称，评测覆盖不足 39/39 的实验在名称后标注“（评测未全量）”，状态以本节源报告为准；仅统计已提交视频，不把缺失视频计为失败。per-step 与 full-recipe 分表展示，各表内按模型前缀集中排列，视频列保留各实验覆盖范围，不能跨覆盖范围直接排名，也不能把 full-recipe 与 per-step 当作相同协议比较。比例统一换算为百分数并保留两位小数；时间单位为秒。原始精度见源报告。
 
 ### 官方评测指标
 
@@ -13,22 +13,23 @@
 | 实验 | 视频 | IC-Acc | 错误 TP | 错误 FP | 错误 TN | 错误 FN | Mistake Acc | Precision | Recall | F1 | BERT | Rouge-L |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | qwen3-vl-30b-per-step | 39/39 | 18.6% | 269 | 2420 | 73 | 128 | 0.12 | 0.10 | 0.68 | 0.17 | 0.304 | 0.179 |
-| qwen3-vl-30b-per-step-dedup（未完成） | 20/39 | 19.9% | 110 | 728 | 37 | 41 | 0.16 | 0.13 | 0.73 | 0.22 | 0.295 | 0.172 |
+| qwen3-vl-30b-per-step-dedup（评测未全量） | 20/39 | 19.9% | 110 | 728 | 37 | 41 | 0.16 | 0.13 | 0.73 | 0.22 | 0.295 | 0.172 |
 | qwen3-vl-30b-per-step-dedup-manual | 39/39 | 18.2% | 305 | 2481 | 64 | 92 | 0.13 | 0.11 | 0.77 | 0.19 | 0.295 | 0.167 |
 | qwen3.5-27b-per-step | 39/39 | 26.1% | 36 | 149 | 95 | 361 | 0.20 | 0.19 | 0.09 | 0.12 | 0.342 | 0.205 |
-| qwen3.5-27b-per-step-dedup-manual（未完成） | 20/39 | 24.8% | 2 | 1 | 53 | 149 | 0.27 | 0.67 | 0.01 | 0.03 | 0.410 | 0.337 |
+| qwen3.5-27b-per-step-dedup-manual（评测未全量） | 20/39 | 24.8% | 2 | 1 | 53 | 149 | 0.27 | 0.67 | 0.01 | 0.03 | 0.410 | 0.337 |
 | qwen3.5-9b-per-step | 39/39 | 11.4% | 163 | 1191 | 38 | 234 | 0.12 | 0.12 | 0.41 | 0.19 | 0.336 | 0.191 |
 | qwen3.5-9b-per-step-dedup-manual | 39/39 | 5.3% | 171 | 631 | 18 | 226 | 0.18 | 0.21 | 0.43 | 0.29 | 0.336 | 0.197 |
 | proassist-i5 | 39/39 | 18.9% | 38 | 188 | 156 | 359 | 0.26 | 0.17 | 0.10 | 0.12 | 0.355 | 0.214 |
+| proassist-i5-optimized | 39/39 | 18.9% | 38 | 188 | 156 | 359 | 0.26 | 0.17 | 0.10 | 0.12 | 0.355 | 0.214 |
 
 #### full-recipe
 
 | 实验 | 视频 | IC-Acc | 错误 TP | 错误 FP | 错误 TN | 错误 FN | Mistake Acc | Precision | Recall | F1 | BERT | Rouge-L |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | qwen3-vl-30b-full-recipe | 39/39 | 11.4% | 110 | 3426 | 48 | 287 | 0.04 | 0.03 | 0.28 | 0.06 | 0.314 | 0.182 |
-| qwen3.5-27b-full-recipe（未完成） | 7/39 | 13.5% | 8 | 271 | 23 | 28 | 0.09 | 0.03 | 0.22 | 0.05 | 0.366 | 0.200 |
+| qwen3.5-27b-full-recipe（评测未全量） | 7/39 | 13.5% | 8 | 271 | 23 | 28 | 0.09 | 0.03 | 0.22 | 0.05 | 0.366 | 0.200 |
 
-补充来源（仅官方指标）：[qwen3.5-9b-per-step-dedup](outputs/qwen3.5-9b-per-step-dedup/official-report.txt)。其余源报告链接见本节末尾。
+源报告链接见本节末尾；当前输出目录中没有仅含官方指标的额外实验报告。
 
 ### 覆盖范围与完成检测
 
@@ -39,20 +40,21 @@
 | 实验 | 视频 | 参考步骤 | 无错误步骤 | TP | FP | FN | Precision@15s | Recall@15s | F1@15s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | qwen3-vl-30b-per-step | 39/39 | 562 | 264 | 167 | 144 | 395 | 53.70% | 29.72% | 38.26% |
-| qwen3-vl-30b-per-step-dedup（未完成） | 20/39 | 254 | 141 | 74 | 45 | 180 | 62.18% | 29.13% | 39.68% |
+| qwen3-vl-30b-per-step-dedup（评测未全量） | 20/39 | 254 | 141 | 74 | 45 | 180 | 62.18% | 29.13% | 39.68% |
 | qwen3-vl-30b-per-step-dedup-manual | 39/39 | 562 | 264 | 159 | 104 | 403 | 60.46% | 28.29% | 38.55% |
 | qwen3.5-27b-per-step | 39/39 | 562 | 264 | 137 | 88 | 425 | 60.89% | 24.38% | 34.82% |
-| qwen3.5-27b-per-step-dedup-manual（未完成） | 20/39 | 254 | 141 | 58 | 41 | 196 | 58.59% | 22.83% | 32.86% |
+| qwen3.5-27b-per-step-dedup-manual（评测未全量） | 20/39 | 254 | 141 | 58 | 41 | 196 | 58.59% | 22.83% | 32.86% |
 | qwen3.5-9b-per-step | 39/39 | 562 | 264 | 55 | 32 | 507 | 63.22% | 9.79% | 16.95% |
 | qwen3.5-9b-per-step-dedup-manual | 39/39 | 562 | 264 | 88 | 70 | 474 | 55.70% | 15.66% | 24.44% |
 | proassist-i5 | 39/39 | 562 | 264 | 55 | 301 | 507 | 15.45% | 9.79% | 11.98% |
+| proassist-i5-optimized | 39/39 | 562 | 264 | 55 | 301 | 507 | 15.45% | 9.79% | 11.98% |
 
 #### full-recipe
 
 | 实验 | 视频 | 参考步骤 | 无错误步骤 | TP | FP | FN | Precision@15s | Recall@15s | F1@15s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | qwen3-vl-30b-full-recipe | 39/39 | 562 | 264 | 105 | 117 | 457 | 47.30% | 18.68% | 26.79% |
-| qwen3.5-27b-full-recipe（未完成） | 7/39 | 83 | 52 | 17 | 37 | 66 | 31.48% | 20.48% | 24.82% |
+| qwen3.5-27b-full-recipe（评测未全量） | 7/39 | 83 | 52 | 17 | 37 | 66 | 31.48% | 20.48% | 24.82% |
 
 ### 时间命中率与完成时间误差
 
@@ -63,20 +65,21 @@
 | 实验 | Hit@5s | Hit@15s | Hit@30s | 时间误差样本数 | 平均有符号误差(s) | 平均绝对误差(s) | 绝对误差中位数(s) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | qwen3-vl-30b-per-step | 12.99% | 29.72% | 43.42% | 311 | -23.15 | 25.73 | 12.00 |
-| qwen3-vl-30b-per-step-dedup（未完成） | 12.60% | 29.13% | 38.58% | 119 | -12.83 | 17.47 | 10.00 |
+| qwen3-vl-30b-per-step-dedup（评测未全量） | 12.60% | 29.13% | 38.58% | 119 | -12.83 | 17.47 | 10.00 |
 | qwen3-vl-30b-per-step-dedup-manual | 12.99% | 28.29% | 38.26% | 263 | -17.11 | 21.63 | 10.00 |
 | qwen3.5-27b-per-step | 16.01% | 24.38% | 30.78% | 225 | -21.25 | 28.07 | 8.97 |
-| qwen3.5-27b-per-step-dedup-manual（未完成） | 16.14% | 22.83% | 31.50% | 99 | -13.98 | 23.03 | 10.90 |
+| qwen3.5-27b-per-step-dedup-manual（评测未全量） | 16.14% | 22.83% | 31.50% | 99 | -13.98 | 23.03 | 10.90 |
 | qwen3.5-9b-per-step | 5.87% | 9.79% | 12.63% | 87 | -17.84 | 21.06 | 8.00 |
 | qwen3.5-9b-per-step-dedup-manual | 8.54% | 15.66% | 20.28% | 158 | -25.67 | 30.61 | 12.00 |
 | proassist-i5 | 3.38% | 9.79% | 20.64% | 356 | -58.35 | 58.36 | 40.65 |
+| proassist-i5-optimized | 3.38% | 9.79% | 20.64% | 356 | -58.35 | 58.36 | 40.65 |
 
 #### full-recipe
 
 | 实验 | Hit@5s | Hit@15s | Hit@30s | 时间误差样本数 | 平均有符号误差(s) | 平均绝对误差(s) | 绝对误差中位数(s) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | qwen3-vl-30b-full-recipe | 8.19% | 18.68% | 25.44% | 222 | 31.25 | 59.24 | 16.98 |
-| qwen3.5-27b-full-recipe（未完成） | 9.64% | 20.48% | 34.94% | 54 | 35.63 | 47.84 | 27.14 |
+| qwen3.5-27b-full-recipe（评测未全量） | 9.64% | 20.48% | 34.94% | 54 | 35.63 | 47.84 | 27.14 |
 
 ### 无错误步骤误报率与重复反馈
 
@@ -87,41 +90,71 @@
 | 实验 | 误报步骤/无错误步骤 | 步骤误报率 | Feedback 总数 | 重复条数 | 重复率 |
 | --- | --- | --- | --- | --- | --- |
 | qwen3-vl-30b-per-step | 150/264 | 56.82% | 3462 | 2905 | 83.91% |
-| qwen3-vl-30b-per-step-dedup（未完成） | 95/141 | 67.38% | 1062 | 614 | 57.82% |
+| qwen3-vl-30b-per-step-dedup（评测未全量） | 95/141 | 67.38% | 1062 | 614 | 57.82% |
 | qwen3-vl-30b-per-step-dedup-manual | 176/264 | 66.67% | 3563 | 2358 | 66.18% |
 | qwen3.5-27b-per-step | 8/264 | 3.03% | 288 | 239 | 82.99% |
-| qwen3.5-27b-per-step-dedup-manual（未完成） | 0/141 | 0.00% | 4 | 0 | 0.00% |
+| qwen3.5-27b-per-step-dedup-manual（评测未全量） | 0/141 | 0.00% | 4 | 0 | 0.00% |
 | qwen3.5-9b-per-step | 90/264 | 34.09% | 1735 | 1426 | 82.19% |
 | qwen3.5-9b-per-step-dedup-manual | 203/264 | 76.89% | 902 | 218 | 24.17% |
 | proassist-i5 | 93/264 | 35.23% | 227 | 4 | 1.76% |
+| proassist-i5-optimized | 93/264 | 35.23% | 227 | 4 | 1.76% |
 
 #### full-recipe
 
 | 实验 | 误报步骤/无错误步骤 | 步骤误报率 | Feedback 总数 | 重复条数 | 重复率 |
 | --- | --- | --- | --- | --- | --- |
 | qwen3-vl-30b-full-recipe | 43/264 | 16.29% | 3846 | 3636 | 94.54% |
-| qwen3.5-27b-full-recipe（未完成） | 9/52 | 17.31% | 306 | 274 | 89.54% |
+| qwen3.5-27b-full-recipe（评测未全量） | 9/52 | 17.31% | 306 | 274 | 89.54% |
 
 ### 结果解读与来源
 
-- 2026-11-20 更新：`qwen3-vl-30b-full-recipe` 已完成 39/39 视频；汇总预测与 39 份单视频预测逐项一致，以上四张表及来源状态已替换为全量报告。全量完成 Precision/Recall/F1 为 47.30%/18.68%/26.79%，官方 IC-Acc 为 11.4%，错误 Recall 为 0.28。完成时间平均延迟 31.25 秒，平均绝对误差 59.24 秒；Feedback 3846 条中逐字重复 3636 条（94.54%），无错误步骤误报率为 16.29%。此前 16 视频快照与全量覆盖不同，不能把汇总指标变化解释为模型能力改善或退化；27B full-recipe 仍为 7/39，不作两模型全量排名。
+- 2026-11-20 更新：`qwen3-vl-30b-full-recipe` 已完成 39/39 视频；汇总预测与 39 份单视频预测逐项一致，以上四张表及来源状态已替换为全量报告。全量完成 Precision/Recall/F1 为 47.30%/18.68%/26.79%，官方 IC-Acc 为 11.4%，错误 Recall 为 0.28。完成时间平均延迟 31.25 秒，平均绝对误差 59.24 秒；Feedback 3846 条中逐字重复 3636 条（94.54%），无错误步骤误报率为 16.29%。此前 16 视频快照与全量覆盖不同，不能把汇总指标变化解释为模型能力改善或退化；27B full-recipe 的评测快照仍为 7/39（当前预测为 9/39），不作两模型全量排名。
 - 完整覆盖的 `qwen3-vl-30b-per-step` → `qwen3-vl-30b-per-step-dedup-manual`：完成 Precision 从 53.70% 升至 60.46%，Recall 从 29.72% 降至 28.29%，F1 从 38.26% 微升至 38.55%；无错误步骤误报率从 56.82% 升至 66.67%。因此完成 Precision 提升不能解释为完成覆盖能力全面提升。
 - 同一对照中，重复率从 83.91% 降至 66.18%，但 Feedback 总数从 3462 增至 3563：逐字重复减少与反馈总量下降并不是同一件事。
-- `qwen3.5-27b-per-step-dedup-manual`（未完成） 的重复率为 0%，但仅有 4 条 Feedback，且只覆盖 20 个视频，不能仅凭零重复判断纠错能力优秀。
-- 当前 `qwen3.5-9b-per-step-dedup` 有官方报告，但未找到包含 Supplementary metrics 的报告，因此本节不补造该实验的新增指标。
+- `qwen3.5-27b-per-step-dedup-manual`（评测未全量） 的重复率为 0%，但仅有 4 条 Feedback，且报告只覆盖 20 个视频（当前预测已达 39/39，待重新评测），不能仅凭零重复判断纠错能力优秀。
 - `proassist-i5` 完整覆盖 39 个视频，按 per-step 列入；其自由文本到事件的映射和流式输入与 Qwen 设置不同，跨模型差异不能单独归因于模型能力。完成平均提前 58.35 秒，逐字重复率虽低（1.76%），仍需结合错误 Recall 0.10 与高静默率解读；详细行为分析见本报告 ProAssist-I5 专节。
+- `proassist-i5-optimized` 已补入全部四类指标表；其 `predictions.json` 与 `proassist-i5` 解析后完全相同，两份报告的指标也相同，因此不能作为独立效果提升的证据。
 - 实现与完整计算口径见 [custom_metrics.py](custom_metrics.py)，评测入口为 [evaluate_official.py](evaluate_official.py)。所有报告的 `metric_version=1`、`scope=submitted_videos_only`；未定义的比例或空时间样本使用 null，表中显示为“—”。
 
 - [proassist-i5](outputs/proassist-i5/report.txt)（39/39 视频；本地适配的 per_recipe_step 协议）
 - [qwen3-vl-30b-per-step](outputs/qwen3-vl-30b-per-step/report.txt)（39/39 视频）
-- [qwen3-vl-30b-per-step-dedup（未完成）](outputs/qwen3-vl-30b-per-step-dedup/report.txt)（20/39 视频）
+- [qwen3-vl-30b-per-step-dedup（评测未全量）](outputs/qwen3-vl-30b-per-step-dedup/report.txt)（20/39 视频）
 - [qwen3-vl-30b-per-step-dedup-manual](outputs/qwen3-vl-30b-per-step-dedup-manual/report.txt)（39/39 视频）
 - [qwen3-vl-30b-full-recipe](outputs/qwen3-vl-30b-full-recipe/report.txt)（39/39 视频）
 - [qwen3.5-27b-per-step](outputs/qwen3.5-27b-per-step/report.txt)（39/39 视频）
-- [qwen3.5-27b-per-step-dedup-manual（未完成）](outputs/qwen3.5-27b-per-step-dedup-manual/report.txt)（20/39 视频）
-- [qwen3.5-27b-full-recipe（未完成）](outputs/qwen3.5-27b-full-recipe/report.txt)（7/39 视频）
+- [qwen3.5-27b-per-step-dedup-manual（评测未全量）](outputs/qwen3.5-27b-per-step-dedup-manual/report.txt)（20/39 视频）
+- [qwen3.5-27b-full-recipe（评测未全量）](outputs/qwen3.5-27b-full-recipe/report.txt)（7/39 视频）
 - [qwen3.5-9b-per-step](outputs/qwen3.5-9b-per-step/report.txt)（39/39 视频）
 - [qwen3.5-9b-per-step-dedup-manual](outputs/qwen3.5-9b-per-step-dedup-manual/report.txt)（39/39 视频）
+
+- [proassist-i5-optimized](outputs/proassist-i5-optimized/report.txt)（39/39 视频）
+
+### 当前预测与评测覆盖核对（2026-11-20）
+
+以下预测数量读取当前 `predictions.json`；数量一致仅表示覆盖数量相同，不证明报告对应同一份预测内容。上方指标仍来自现有源报告。本次没有重新运行模型或官方评测；配置指定的本地标注目录 `../datasets/ego-mc-bench/annotations` 不存在，无法为新增预测计算有效指标。
+
+| 实验 | 当前预测视频 | 已评测视频 | 状态 |
+| --- | --- | --- | --- |
+| decode-test | 1/39 | — | 解码测试，不用于正式计分 |
+| full-recipe-decode-test | 1/39 | — | 解码测试，不用于正式计分 |
+| proassist-i5 | 39/39 | 39/39 | 评测覆盖与当前预测数量一致 |
+| proassist-i5-optimized | 39/39 | 39/39 | 评测覆盖与当前预测数量一致 |
+| proassist-i5-smoke | 2/39 | — | 小规模测试，未评测 |
+| qwen3-vl-30b-full-recipe | 39/39 | 39/39 | 评测覆盖与当前预测数量一致 |
+| qwen3-vl-30b-per-step | 39/39 | 39/39 | 评测覆盖与当前预测数量一致 |
+| qwen3-vl-30b-per-step-dedup | 20/39 | 20/39 | 评测覆盖与当前预测数量一致 |
+| qwen3-vl-30b-per-step-dedup-manual | 39/39 | 39/39 | 评测覆盖与当前预测数量一致 |
+| qwen3-vl-30b-per-step-dedup-single-user | 4/39 | — | 未评测 |
+| qwen3.5-27b-full-recipe | 9/39 | 7/39 | 报告落后于当前预测，待重新评测 |
+| qwen3.5-27b-per-step | 39/39 | 39/39 | 评测覆盖与当前预测数量一致 |
+| qwen3.5-27b-per-step-dedup-manual | 39/39 | 20/39 | 报告落后于当前预测，待重新评测 |
+| qwen3.5-9b-full-recipe | 17/39 | — | 未评测 |
+| qwen3.5-9b-per-step | 39/39 | 39/39 | 评测覆盖与当前预测数量一致 |
+| qwen3.5-9b-per-step-dedup-manual | 39/39 | 39/39 | 评测覆盖与当前预测数量一致 |
+| qwen3vl-2b-one | 1/39 | — | 小规模测试，未评测 |
+| qwen3vl-8b-one | 1/39 | — | 小规模测试，未评测 |
+
+需补评测的正式实验：`qwen3.5-27b-per-step-dedup-manual`（39 视频）、`qwen3.5-27b-full-recipe`（9 视频）、`qwen3.5-9b-full-recipe`（17 视频）、`qwen3-vl-30b-per-step-dedup-single-user`（4 视频）。请在具有标注数据和官方评测依赖的环境中生成新报告，再替换上方对应快照。文本诊断实验位于 `following-test`、`proassist-yes-text-probe` 和 `proassist-yes-text-controls`，不属于视频官方评测，保留各自独立统计口径。
 
 ---
 
@@ -485,7 +518,10 @@ CUDA_VISIBLE_DEVICES=2 python -m tests.test_9b_following \
 
 后续将该实验选择显式化：两个推理入口新增 `--feedback-dedup-rule paper|explicit`（默认 explicit），配置随选项记录实际提示词版本、`paper_prompt_verbatim` 和规则正文；paper 模式规则正文为 null。该选项只控制追加规则，不恢复旧版本的缓存策略或其他实现细节。启动脚本六组命令全部显式选择 explicit，并将输出和评测路径统一为 `-explicit-dedup` 后缀；两条已有续跑配置改为全量新实验，以匹配完整覆盖评测要求。已通过 27 项单元测试、Bash 语法检查，以及六组推理/评测路径配对检查。
 
-## 2026-11-19：ProAssist-I5 完整运行分析
+## 2026-11-19：ProAssist-I5 完整运行分析（指标于 2026-11-20 复核）
+
+2026-11-20 指标复核：已重新读取当前 `proassist-i5/report.txt` 的最后一组累计结果和补充指标，并核对当前汇总预测。覆盖 39/39，IC-Acc 18.9%，错误 Precision/Recall/F1 为 0.17/0.10/0.12；完成 Precision/Recall/F1 为 15.45%/9.79%/11.98%，完成 TP/FP/FN 为 55/301/507。当前预测共 562 条 Instruct、356 条 Success、227 条 Feedback；与报告事件数一致。本次源报告数值与原汇总相同，故指标保持不变。`proassist-i5-optimized` 的当前汇总预测与本实验完全相同。下文帧级行为分析保留为 2026-11-19 的历史分析，不代表本次重新审计了全部 JSONL。
+
 
 ### 数据来源、结构与核查边界
 
