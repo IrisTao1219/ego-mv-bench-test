@@ -94,9 +94,9 @@ python scripts/wait_for_gpu.py \
   --gpu 1 \
   --min-free-mib 21680 \
   --interval 5 \
-  -- python run_full_recipe.py \
+  -- CUDA_VISIBLE_DEVICES=1 python run_full_recipe.py \
   --data-root ../datasets/ego-mc-bench \
-  --model-path ../datasets/Hf_model/Qwen3-VL-30B-Instruct \
+  --model-path ../datasets/Hf_model/Qwen3.5-27B \
   --limit 0 \
   --interval 5 \
   --sample-fps 1 \
@@ -106,8 +106,8 @@ python scripts/wait_for_gpu.py \
   --mistake-prompt detailed \
   --feedback-dedup-rule paper \
   --assistant-feedback false \
-  --thinking default \
-  --output-dir outputs/qwen3-vl-30b-full-recipe \
+  --thinking off \
+  --output-dir outputs/qwen3.5-27b-full-recipe \
   --continue
 
 python scripts/wait_for_gpu.py \

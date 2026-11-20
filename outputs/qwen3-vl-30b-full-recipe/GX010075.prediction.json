@@ -1,0 +1,25 @@
+{
+  "video_id": "GX010075",
+  "pred_texts": [
+    "Instruct: Get a pack of instant noodles and put it in a microwave safe bowl.",
+    "Success: Step complete.",
+    "Instruct: Now let's boil some water in the kettle. Get about 250 ml of water.",
+    "Success: Step complete.",
+    "Instruct: Now boil the water in the kettle.",
+    "Feedback: You are about to make a mistake by placing the kettle on the counter instead of plugging it in to boil the water. Make sure to plug in the kettle to complete the step.",
+    "Feedback: You have placed the kettle on the counter without plugging it in, which means it cannot boil the water. Make sure to plug in the kettle to complete the step.",
+    "Success: Step complete.",
+    "Instruct: Now fill the microwave safe mug with the noodles halfway with water."
+  ],
+  "pred_timestamps": [
+    0.0,
+    10.0,
+    10.0,
+    30.0,
+    30.0,
+    40.0,
+    45.0,
+    50.0,
+    50.0
+  ]
+}
