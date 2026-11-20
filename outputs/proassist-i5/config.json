@@ -1,12 +1,15 @@
 {
   "data_root": "../datasets/ego-mc-bench",
   "output_dir": "outputs/proassist-i5",
-  "overwrite": true,
+  "overwrite": false,
   "continue_run": false,
   "video_ids": null,
   "start_video_id": null,
   "limit": 0,
   "max_seconds": 0,
+  "paper": false,
+  "assistant_feedback": true,
+  "feedback_dedup_rule": "explicit",
   "proassist_root": "../ProAssist",
   "model_path": "../models/ProAssist-Model-L4096-I5",
   "base_model_path": "../models/Llama-3.1-8B-Instruct",
@@ -41,11 +44,5 @@
   "offline": true,
   "reference": "https://github.com/pro-assist/ProAssist",
   "instruction_timestamps_used": true,
-  "feedback_and_success_labels_used": false,
-  "input_image_policy": "aspect_ratio_thumbnail_then_model_vision_processor",
-  "context_policy": "upstream_summarize_and_drop",
-  "output_length_policy": "eos_only",
-  "num_tokens_per_img": 5,
-  "use_binary_decision_head": false,
-  "torch_version": "2.11.0+cu128"
+  "feedback_and_success_labels_used": false
 }
