@@ -28,6 +28,16 @@ class ContextAlignmentTests(unittest.TestCase):
         self.assertIsNone(generation_limits(0)['max_new_tokens'])
         self.assertEqual(generation_limits(64)['max_new_tokens'], 64)
 
+    def test_zero_threshold_disables_native_silence_override(self):
+        import torch
+        model = SimpleNamespace(config=SimpleNamespace(eos_token_id=2, w2t_target_id=3))
+        logits = torch.zeros(1, 1, 4)
+        logits[..., 2] = 2
+        model.forward = lambda **kw: SimpleNamespace(logits=logits,
+            past_key_values='cache', w2t_probs=torch.tensor([[.99]]))
+        output, _ = generate_until_eos(model, None, None, 0)
+        self.assertEqual(output.tolist(), [[2]])
+
     def test_proassist_dynamic_decode_exceeds_old_budget_and_retains_cache(self):
         import torch
         calls = []

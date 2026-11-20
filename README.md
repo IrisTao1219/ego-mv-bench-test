@@ -272,11 +272,15 @@ CUDA_VISIBLE_DEVICES=1 python evaluate_official.py \
 
 ## ProAssist 自主发言实验
 
+加 `--paper` 仅切换成共享的两个 user 提示：先询问是否完成，明确 NO（大小写兼容）后才询问是否出错。不注入自拟 system，不使用 5 秒查询间隔，不截取均匀 32 帧；继续按 `--sample-fps`（默认 1 FPS）逐帧输入并保留连续 KV cache，按 `--context-length`（默认 4096）调用官方进度摘要与原生静默门控。每张新帧只编码一次，错误追问为同一缓存上的文本消息，不重复输入该帧。完成 YES 输出 `Success: Step complete.`；错误 YES 输出反馈正文，错误 NO 不产生事件。完成检查静默或格式错误不当作 NO。近期反馈和去重选项复用其他实验的公共函数。不加 `--paper` 时保留原来的自主发言模式。
+
+在原运行命令上增加 `--paper`，并使用新的输出目录即可。
+
 **协议核对状态：当前为单路自主发言实验，不是目标论文表 3 的严格复现。** 不再逐帧发出完成/错误问题。按用户指定的本地规则，非空输出以完整单词 YES 开头（忽略大小写）映射为 Success，其余发言全部映射为 Feedback；这仅是序列化规则，不保证事件语义正确。系统提示及事件映射仍需真实模型验证。详见 [PROASSIST_PROTOCOL_AUDIT.md](PROASSIST_PROTOCOL_AUDIT.md)。
 
 独立入口 `run_proassist.py` 使用 ProAssist 连续流式历史机制：默认 `--sample-fps 1 --context-length 4096 --max-side 448 --max-new-tokens 0`，每 1 秒输入一张新帧，累积视觉与生成对话的 KV cache，不做均匀 32 帧截取，也不重放历史帧。接近 token 预算时调用官方 `manage_kv_cache` 的 `summarize_and_drop` 进度摘要机制；保留至少 128 tokens 的摘要触发余量。`--context-length 0` 可显式关闭摘要，但不再是默认设置。生成仍按静默规则或 EOS 停止，阈值默认 0.3 是本地默认值，不代表所有数据集最优值。
 
-数据选择、输出参数、图像缩放、生成预算参数与 JSON 保存复用 `run_inference.py`，完整食谱指令提取复用 `run_full_recipe.py`。图像仍保持宽高比、不放大、最长边 448，再交给官方视觉处理器；这项本地预处理及 ProAssist 上的提示应用方式尚未与表 3 对齐。单步协议切换时重置缓存；完整食谱协议只追加下一条指令，持续保留历史并按需摘要。支持 `--overwrite` 和 `--continue`。ProAssist 不提供 `--max-frames`，以免将均匀帧预算误用于流式历史。
+数据选择、输出参数、图像缩放、生成预算参数与 JSON 保存复用 `run_inference.py`，完整食谱指令提取复用 `run_full_recipe.py`。图像仍保持宽高比、不放大、最长边 448，再交给官方视觉处理器；这项本地预处理及 ProAssist 上的提示应用方式尚未与表 3 对齐。单步协议切换时重置缓存；完整食谱协议只追加下一条指令，持续保留历史并按需摘要。支持 `--overwrite` 和 `--continue`。两个模式都使用 ProAssist 连续缓存，不提供 `--max-frames` 或 `--interval`。
 
 请使用 **独立 Python 3.10 或 3.11 环境**。本项目提供 `requirements-proassist.txt` 推理候选依赖：保留用户已工作的 PyTorch 2.11.0+cu128 / torchvision 0.26.0+cu128，采用官方代码对应的 Transformers 4.43.1、PEFT 0.11.1；该新旧组合尚未在服务器上跑通真实模型，不是验证过的锁文件。不要安装本项目的 Qwen `requirements.txt`，也不要安装 ProAssist 官方整套旧版训练/演示依赖，后者会要求 torch 2.3.1，并包含锁定旧 torch 的 vLLM。
 

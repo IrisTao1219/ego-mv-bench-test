@@ -13,7 +13,13 @@ from run_proassist import ProAssistBackend, parse_event, run_video, cache_tokens
 
 
 class ProAssistTests(unittest.TestCase):
-    def run_sample(self, protocol='full_recipe', replies=(), times=None, dry=False, count=12):
+    def test_paper_mode_keeps_native_frame_clock_without_prefix_replay(self):
+        _, logs, _ = self.run_sample(dry=True, count=160, paper=True)
+        self.assertEqual([r['timestamp'] for r in logs], [i / 2 for i in range(160)])
+        self.assertEqual([r['frame_indices'] for r in logs], [[i] for i in range(160)])
+        self.assertTrue(all(r['stage'] == 'completion' for r in logs))
+
+    def run_sample(self, protocol='full_recipe', replies=(), times=None, dry=False, count=12, paper=False):
         import cv2
         import numpy as np
         sample = dict(video_id='v', texts=['FIRST', 'SECRET', 'SECOND'],
@@ -36,7 +42,8 @@ class ProAssistTests(unittest.TestCase):
                 return dict(responses=[dict(stage='stream', raw_response=text,
                     parse_error=None, accepted=parse_event(text))])
         backend = None if dry else Backend()
-        args = SimpleNamespace(protocol=protocol, sample_fps=2, max_seconds=0, dry_run=dry)
+        args = SimpleNamespace(protocol=protocol, sample_fps=2, max_seconds=0, dry_run=dry,
+                               paper=paper)
         log = io.StringIO()
         result = run_video(sample, args, backend, cap, log)
         if not dry:
@@ -199,6 +206,37 @@ class ProAssistTests(unittest.TestCase):
                     self.assertNotIn('answer ‘NO’', system_rules(args))
                     self.assertNotIn('Has the person already completed', system_rules(args))
                     self.assertEqual((root/'adapter/config.json').read_text(), original)
+                    from run_inference import prompt_for
+                    args.paper = True
+                    cleaned = iter(['No, not complete.', 'Yes. Add salt.'])
+                    processor.cleanup_text = lambda raw: (next(cleaned), 'assistant')
+                    sequences = []
+                    def get_sequence(n, messages, first):
+                        sequences.append((n, messages, first))
+                        return torch.tensor([[1]]), str(messages)
+                    processor.get_input_sequence = get_sequence
+                    backend.reset('FIRST')
+                    before = len(calls)
+                    rows = backend.step(np.zeros((8, 8, 3), dtype=np.uint8), 5)['responses']
+                    self.assertEqual([r['stage'] for r in rows], ['completion', 'mistake'])
+                    self.assertEqual(rows[1]['accepted'], 'Feedback: Add salt.')
+                    self.assertEqual(rows[0]['prompt'], prompt_for('completion', 'FIRST', 5, []))
+                    self.assertEqual(rows[1]['prompt'], prompt_for('mistake', 'FIRST', 5, []))
+                    self.assertEqual([n for n, _, _ in sequences], [1, 0])
+                    self.assertEqual([first for _, _, first in sequences], [True, False])
+                    for _, messages, _ in sequences:
+                        self.assertEqual([m['role'] for m in messages], ['user'])
+                    queries = [c for c in calls[before:] if c[0] == 'generate']
+                    self.assertEqual([c[1] for c in queries], [None, 'cache-4'])
+                    self.assertTrue(all(c[2]['not_talk_threshold'] == .3 for c in queries))
+                    cleaned = iter(['Yes. It is done.'])
+                    processor.cleanup_text = lambda raw: (next(cleaned), 'assistant')
+                    rows = backend.step([np.zeros((8, 8, 3), dtype=np.uint8)], 10)['responses']
+                    self.assertEqual(len(rows), 1)
+                    self.assertEqual(rows[0]['accepted'], 'Success: Step complete.')
+                    self.assertEqual([m['role'] for m in rows[0]['input_messages']],
+                                     ['user', 'assistant', 'user'])
+
                 finally:
                     backend.close()
 

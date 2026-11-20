@@ -16,7 +16,8 @@ from types import SimpleNamespace
 
 from run_inference import (load_samples, recipe_steps, save_json,
                            add_visual_arguments, add_data_arguments, resize_frame, continuation_state,
-                           prompt_for, prediction_event)
+                           prompt_for, prediction_event, check_response, feedback_context, inference_messages,
+                           add_feedback_arguments, feedback_prompt_config)
 from run_full_recipe import instruction_texts
 
 
@@ -86,7 +87,7 @@ def generate_until_eos(model, embeds, past, threshold):
                             use_cache=True, return_dict=True)
         past = out.past_key_values
         scores = out.logits[:, -1:, :].clone()
-        if not tokens:
+        if not tokens and threshold > 0:
             probability = out.w2t_probs[0, -1]
             model.last_not_talk_prob = probability
             scores[..., model.config.w2t_target_id] = (1e4 if probability > threshold else -1e4)
@@ -150,32 +151,48 @@ class ProAssistBackend:
         self.past = self.last = None
         self.first = True
         self.runner.init_key_values_to_keep = None
-        self.runner.initial_sys_prompt = system_rules(self.args)
-        self.pending = [{'role': 'system', 'content': self.runner.initial_sys_prompt}]
+        self.runner.initial_sys_prompt = '' if getattr(self.args, 'paper', False) else system_rules(self.args)
+        self.pending = [] if getattr(self.args, 'paper', False) else [
+            {'role': 'system', 'content': self.runner.initial_sys_prompt}]
         self.set_instruction(instruction)
         self.model.last_not_talk_prob = None
 
     def set_instruction(self, instruction):
         self.instruction = instruction
+        self.recent = []
         # Full-recipe transitions append one instruction and preserve stream history.
         self.pending = getattr(self, 'pending', []) + [
             {'role': 'user', 'content': instruction_prompt(instruction)}]
-        self.runner.knowledge = 'Task knowledge: ' + instruction_prompt(instruction)
+        self.runner.knowledge = ('Task knowledge: Current recipe step: ' + instruction
+                                 if getattr(self.args, 'paper', False) else
+                                 'Task knowledge: ' + instruction_prompt(instruction))
 
-    def _query(self, rgb, timestamp):
+    def _query(self, rgb, timestamp, stage='stream'):
         began = time.monotonic()
         torch = self.torch
         import numpy as np
-        messages, self.pending = self.pending, []
-        prompt = '\n'.join(m['content'] for m in messages if m['role'] == 'user')
+        paper = getattr(self.args, 'paper', False)
+        if paper:
+            prompt = prompt_for(stage, self.instruction, timestamp, self.recent,
+                self.args.mistake_prompt, explicit_dedup=self.args.feedback_dedup_rule == 'explicit')
+            messages = inference_messages([], prompt, self.instruction, self.recent,
+                                          assistant_feedback=self.args.assistant_feedback)
+            messages = [dict(m, content=(''.join(block['text'] for block in m['content'])
+                                        if isinstance(m['content'], list) else m['content']))
+                        for m in messages]
+        else:
+            messages, self.pending = self.pending, []
+            prompt = '\n'.join(m['content'] for m in messages if m['role'] == 'user')
+        frames = [] if rgb is None else rgb if isinstance(rgb, list) else [rgb]
         cache_before = cache_tokens(self.past)
         ids, input_str = self.runner.processor.get_input_sequence(
-            int(rgb is not None), messages, self.first)
+            len(frames), messages, self.first)
         self.first = False
         inputs = {'input_ids': ids}
-        if rgb is not None:
-            rgb = np.asarray(resize_frame(rgb, self.args.max_side))
-            inputs['images'] = torch.from_numpy(rgb.copy()).permute(2, 0, 1).unsqueeze(0).float()
+        images = [torch.from_numpy(np.asarray(resize_frame(frame, self.args.max_side)).copy())
+                  .permute(2, 0, 1).unsqueeze(0).float() for frame in frames]
+        if images:
+            inputs['images'] = torch.cat(images, dim=0)
         inputs = self.runner.processor.add_last_assistant_message(inputs, self.last)
         inputs = {k: v.to(self.model.device, self.model.dtype) if v.is_floating_point()
                   else v.to(self.model.device) for k, v in inputs.items()}
@@ -195,12 +212,22 @@ class ProAssistBackend:
             cleaned, role = self.runner.processor.cleanup_text(decoded)
             self.last = (output[:, -1:].clone()
                          if self.tokenizer.img_sep_token_id is not None else None)
-        event = parse_event(cleaned)
-        parsed = {'event_type': event.split(':', 1)[0]} if event else None
-        error = None
+        error, parsed, event = None, None, None
+        if paper:
+            try:
+                field = 'completed' if stage == 'completion' else 'mistake'
+                normalized = re.sub(r'^(YES|NO)\b', lambda m: m[0].upper(), cleaned.strip(),
+                                    count=1, flags=re.IGNORECASE)
+                parsed = check_response(normalized, field)
+                event = prediction_event(parsed, field)
+            except ValueError as exc:
+                error = str(exc)
+        else:
+            event = parse_event(cleaned)
+            parsed = {'event_type': event.split(':', 1)[0]} if event else None
         probability = self.model.last_not_talk_prob
         probability = float(probability.item() if hasattr(probability, 'item') else probability) if probability is not None else None
-        return dict(stage='stream', prompt=prompt, raw_response=cleaned,
+        return dict(stage=stage, prompt=prompt, raw_response=cleaned,
                     not_talk_probability=probability, not_talk_threshold=self.args.not_talk_threshold,
                     kv_cache_tokens_before=cache_before, kv_cache_tokens_after_generation=cache_tokens(self.past),
                     decoded_response=decoded, role=role, parsed=parsed,
@@ -212,6 +239,21 @@ class ProAssistBackend:
                     latency_seconds=time.monotonic() - began), inputs
 
     def step(self, rgb, timestamp):
+        if getattr(self.args, 'paper', False):
+            self.recent = feedback_context(self.recent, timestamp)
+            completion, frame_inputs = self._query(rgb, timestamp, 'completion')
+            responses = [completion]
+            if completion['parsed'] is not None and not completion['parsed']['completed']:
+                mistake, _ = self._query(None, timestamp, 'mistake')
+                responses.append(mistake)
+                if mistake['accepted']:
+                    self.recent.append({'time': timestamp, 'feedback': mistake['parsed']['feedback']})
+            if self.args.context_length:
+                frame = SimpleNamespace(model_inputs=frame_inputs, num_frames=1)
+                with self.torch.inference_mode():
+                    self.past, self.last = self.runner.manage_kv_cache(frame, self.past, self.last)
+            responses[-1]['kv_cache_tokens_after_management'] = cache_tokens(self.past)
+            return dict(responses=responses)
         response, inputs = self._query(rgb, timestamp)
         if self.args.context_length:
             frame = SimpleNamespace(model_inputs=inputs, num_frames=1)
@@ -254,6 +296,7 @@ def run_video(sample, args, backend, cap, log):
     append('Instruct: ' + steps[0]['instruction'], start)
     if backend:
         backend.reset(steps[0]['instruction'])
+    paper = getattr(args, 'paper', False)
     tick = 0
     while step_id < len(steps):
         requested = start + tick / args.sample_fps
@@ -268,21 +311,23 @@ def run_video(sample, args, backend, cap, log):
             if backend:
                 backend.reset(steps[step_id]['instruction'])
             continue
-        index = min(count - 1, math.floor(requested * fps))
-        cap.set(cv2.CAP_PROP_POS_FRAMES, index)
-        ok, bgr = cap.read()
-        if not ok:
-            raise RuntimeError(f'Cannot decode frame {index}')
-        # Never attach an event timestamp earlier than instruction injection.
+        indices = [min(count - 1, math.floor(requested * fps))]
+        frames = []
+        for index in indices:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, index)
+            ok, bgr = cap.read()
+            if not ok:
+                raise RuntimeError(f'Cannot decode frame {index}')
+            frames.append(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
         timestamp = requested
-        response = (backend.step(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), timestamp)
-                    if backend else dict(responses=[dict(stage='stream', raw_response='',
-                        decoded_response='', parsed=None, parse_error=None, accepted=None)]))
+        response = (backend.step(frames[0], timestamp)
+                    if backend else dict(responses=[dict(stage='completion' if paper else 'stream',
+                        raw_response='', decoded_response='', parsed=None, parse_error=None, accepted=None)]))
         event = None
         for stage_response in response['responses']:
             event = stage_response['accepted']
             log.write(json.dumps(dict(step_id=step_id, timestamp=timestamp,
-                frame_index=index, frame_timestamp=index / fps, frame_timestamps=[index / fps],
+                frame_index=index, frame_timestamp=index / fps, frame_indices=indices, frame_timestamps=[i / fps for i in indices],
                 instruction=steps[step_id]['instruction'], **stage_response),
                 ensure_ascii=False) + '\n')
             log.flush()
@@ -308,6 +353,9 @@ def run_video(sample, args, backend, cap, log):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     add_data_arguments(p)
+    p.add_argument('--paper', action='store_true',
+                   help='Use shared turn-based user prompts: completion, then mistake on NO')
+    add_feedback_arguments(p)
     p.add_argument('--proassist-root', type=Path, help='Official ProAssist source checkout')
     p.add_argument('--model-path', type=Path, help='Local ProAssist I1/I5/I10 checkpoint')
     p.add_argument('--base-model-path', type=Path)
@@ -355,6 +403,14 @@ def main():
                   reference='https://github.com/pro-assist/ProAssist',
                   instruction_timestamps_used=args.protocol == 'per_recipe_step',
                   feedback_and_success_labels_used=False)
+    if args.paper:
+        config.update(feedback_prompt_config(args))
+        config.update(task='turn_based_completion_then_mistake',
+                      response_mapping='stage_yes_no_case_insensitive', response_format='YES_NO',
+                      task_prompt_policy='shared_turn_based_prompts_in_user', system_prompt=None,
+                      stage_context_policy='shared_continuous_stream',
+                      native_silence_gate=True, query_interval_seconds=1 / args.sample_fps,
+                      feedback_history_policy='current_step_last_60s_exact_text_dedup_latest')
     save_json(args.output_dir / 'config.json', config)
     backend = None
     try:
