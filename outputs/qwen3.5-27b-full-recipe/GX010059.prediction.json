@@ -1,0 +1,41 @@
+{
+  "video_id": "GX010059",
+  "pred_texts": [
+    "Instruct: Get a medium sized pan and add around three tablespoons of olive oil to the pan.",
+    "Feedback: You are using a teaspoon to measure the olive oil, but the recipe requires three tablespoons. This will result in using significantly less oil than intended.",
+    "Feedback: You are using a teaspoon to measure the olive oil, but the recipe requires three tablespoons. This will result in using significantly less oil than intended.",
+    "Success: Step complete.",
+    "Instruct: Now turn on the heat to medium.",
+    "Success: Step complete.",
+    "Instruct: Take two medium sized shallots and dice them into small pieces.",
+    "Success: Step complete.",
+    "Instruct: Now very carefully add the shallots to the hot oil.",
+    "Success: Step complete.",
+    "Instruct: Now take a spoon and keep stirring the shallots in the pan until they are soft to prevent burning. About  3 minutes.",
+    "Success: Step complete.",
+    "Instruct: Now take around one cup of tomato sauce and add it to the pan with the shallots.",
+    "Success: Step complete.",
+    "Instruct: Now stir the tomato and the shallots in the pan together.",
+    "Success: Step complete.",
+    "Instruct: Now keep the pan at medium heat for about one minute and let it simmer."
+  ],
+  "pred_timestamps": [
+    0.0,
+    40.0,
+    45.0,
+    50.0,
+    50.0,
+    110.0,
+    110.0,
+    380.0,
+    380.0,
+    520.0,
+    520.0,
+    740.0,
+    740.0,
+    750.0,
+    750.0,
+    790.0,
+    790.0
+  ]
+}

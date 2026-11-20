@@ -1,0 +1,37 @@
+{
+  "video_id": "GX010043",
+  "pred_texts": [
+    "Instruct: Get a large pan and put it on the stove.",
+    "Success: Step complete.",
+    "Instruct: Add about two tablespoons of oil and switch on the stove.",
+    "Success: Step complete.",
+    "Instruct: Now get a chopping board, knife and an onion.",
+    "Success: Step complete.",
+    "Instruct: Now, peel the onion and dice it.",
+    "Success: Step complete.",
+    "Instruct: Now, carefully add the onion to the pan.",
+    "Success: Step complete.",
+    "Instruct: Now, grab two tomatoes and dice them up.",
+    "Success: Step complete.",
+    "Instruct: Now, add the tomatoes to the pan.",
+    "Success: Step complete.",
+    "Instruct: Now, stir and fix the ingredients in the pan well."
+  ],
+  "pred_timestamps": [
+    0.0,
+    10.0,
+    10.0,
+    180.0,
+    180.0,
+    185.0,
+    185.0,
+    220.0,
+    220.0,
+    240.0,
+    240.0,
+    380.0,
+    380.0,
+    395.0,
+    395.0
+  ]
+}
